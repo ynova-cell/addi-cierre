@@ -79,7 +79,7 @@ export default function App() {
   useEffect(() => {
     fetchData();
     const channel = supabase.channel('changes').on('postgres_changes', { event: '*', schema: 'public', table: 'actividades' }, fetchData).subscribe();
-    const timer = setInterval(() => setNow(new Date()), 30000);
+    const timer = setInterval(() => setNow(new Date()), 60000);
     return () => { supabase.removeChannel(channel); clearInterval(timer); };
   }, [fetchData]);
 
@@ -101,7 +101,7 @@ export default function App() {
 
   const nowMin = now.getHours() * 60 + now.getMinutes();
   const isToday = activeDay === TODAY_IDX;
-  const timePct = isToday ? Math.min(100, Math.max(0, Math.round((nowMin - 16 * 60) / (18 * 60 - 16 * 60) * 100))) : 0;
+  const timePct = isToday ? Math.min(100, Math.max(0, Math.round((nowMin - 7 * 60) / (18 * 60 - 7 * 60) * 100))) : 0;
   const done = actividades.filter(a => a.estado === 'done').length;
   const procPct = actividades.length ? Math.round(done / actividades.length * 100) : 0;
   const expPct = isToday ? Math.min(100, Math.round(actividades.filter(s => nowMin > s.minStart + 15).length / (actividades.length || 1) * 100)) : 0;
@@ -160,14 +160,26 @@ export default function App() {
         {/* TAB: END TO END */}
         {tab === 'ete' && (
           <div>
-            {popup && (
+{popup && (
               <div onClick={(e) => e.target === e.currentTarget && setPopup(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,.4)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <div style={{ background: '#fff', borderRadius: 14, padding: 20, width: 320, maxWidth: '90vw', boxShadow: '0 20px 50px rgba(0,0,0,.18)' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 14 }}>
-                    <div style={{ fontSize: 14, fontWeight: 600, color: '#0F172A', flex: 1, marginRight: 8, lineHeight: 1.3 }}>{popup.label}</div>
-                    <button onClick={() => setPopup(null)} style={{ background: 'none', border: 'none', fontSize: 22, color: '#94A3B8', cursor: 'pointer', lineHeight: 1 }}>×</button>
+                <div style={{ background: '#fff', borderRadius: 14, padding: 20, width: 340, maxWidth: '92vw', boxShadow: '0 20px 50px rgba(0,0,0,.18)' }}>
+                  <div style={{ background: '#0F172A', margin: '-20px -20px 14px', padding: '14px 16px', borderRadius: '14px 14px 0 0', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                    <div style={{ fontSize: 14, fontWeight: 600, color: '#F1F5F9', flex: 1, marginRight: 8, lineHeight: 1.3 }}>{popup.label}</div>
+                    <button onClick={() => setPopup(null)} style={{ background: 'none', border: 'none', fontSize: 22, color: '#64748B', cursor: 'pointer', lineHeight: 1 }}>×</button>
                   </div>
-                  {[['Área', <span style={{ fontSize: 11, padding: '3px 10px', borderRadius: 99, background: AREA_COLORS[popup.areaKey]?.bg || '#F8FAFC', color: AREA_COLORS[popup.areaKey]?.text || '#475569', fontWeight: 500 }}>{popup.area}</span>], ['Horario', popup.hora], ['Responsable', popup.resp], ['Entregable', popup.entregable], ['Estado', <span style={{ fontSize: 11, padding: '3px 10px', borderRadius: 99, background: STATUS_CONFIG[popup.estado]?.bg, color: STATUS_CONFIG[popup.estado]?.text, fontWeight: 500 }}>{STATUS_CONFIG[popup.estado]?.label}</span>]].map(([key, val]) => (
+                  {popup.isProc && (
+                    <div style={{ marginBottom: 14 }}>
+                      <div style={{ fontSize: 10, fontWeight: 700, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 8 }}>Estado</div>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2,1fr)', gap: 6 }}>
+                        {Object.entries(STATUS_CONFIG).map(([k, v]) => (
+                          <button key={k} onClick={() => { updateEstado(popup.id, k); setPopup({ ...popup, estado: k }); }} style={{ padding: '7px 10px', borderRadius: 8, border: `1px solid ${popup.estado === k ? v.dot : '#E2E8F0'}`, background: popup.estado === k ? v.bg : '#fff', color: popup.estado === k ? v.text : '#64748B', fontSize: 12, fontWeight: popup.estado === k ? 600 : 400, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5 }}>
+                            <div style={{ width: 8, height: 8, borderRadius: '50%', background: v.dot, flexShrink: 0 }} />{v.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {[['Área', <span style={{ fontSize: 11, padding: '3px 10px', borderRadius: 99, background: AREA_COLORS[popup.areaKey]?.bg || '#F8FAFC', color: AREA_COLORS[popup.areaKey]?.text || '#475569', fontWeight: 500 }}>{popup.area}</span>], ['Horario', popup.hora], ['Responsable', popup.resp], ['Entregable', popup.entregable]].map(([key, val]) => (
                     <div key={key} style={{ marginBottom: 10 }}>
                       <div style={{ fontSize: 10, fontWeight: 700, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 3 }}>{key}</div>
                       <div style={{ fontSize: 13, color: '#1E293B' }}>{val}</div>
@@ -239,7 +251,7 @@ export default function App() {
             {/* Bars */}
             <div style={{ background: '#fff', borderRadius: 12, border: '1px solid #E2E8F0', padding: '14px 16px', marginBottom: 14 }}>
               {[
-                { label: 'Hora del día', pct: timePct, color: '#3B82F6', shadow: '#DBEAFE', val: now.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' }), showMarker: false },
+                { label: 'Hora del día  (07:00 → 18:00)', pct: timePct, color: '#3B82F6', shadow: '#DBEAFE', val: now.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' }), showMarker: false },
                 { label: 'Progreso del proceso', pct: procPct, color: procStatus === 'ok' ? '#10B981' : procStatus === 'warn' ? '#F59E0B' : '#EF4444', shadow: procStatus === 'ok' ? '#DCFCE7' : procStatus === 'warn' ? '#FEF3C7' : '#FEE2E2', val: `${procPct}%`, showMarker: true },
               ].map(bar => (
                 <div key={bar.label} style={{ marginBottom: 10 }}>
@@ -289,7 +301,7 @@ export default function App() {
                             {!isLast && <div style={{ width: 2, flex: 1, minHeight: 10, marginTop: 2, background: st === 'done' ? '#10B981' : isNow ? 'linear-gradient(#10B981,#3B82F6)' : isLate ? '#FECACA' : '#E2E8F0' }} />}
                           </div>
                           <div>
-                            <div className="step-card" style={{ background: st === 'done' ? '#F0FDF4' : isNow ? '#EFF6FF' : isLate ? '#FEF2F2' : '#EEF2F7', border: `1px solid ${st === 'done' ? '#BBF7D0' : isNow ? '#93C5FD' : isLate ? '#FECACA' : '#CBD5E1'}`, borderRadius: 8, padding: '8px 12px', marginBottom: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, opacity: st === 'done' ? .8 : 1, transition: 'all .2s' }}>
+                            <div className="step-card" style={{ background: st === 'done' ? '#F0FDF4' : isNow ? '#EFF6FF' : isLate ? '#FEF2F2' : '#EEF2F7', border: `1px solid ${st === 'done' ? '#BBF7D0' : isNow ? '#93C5FD' : isLate ? '#FECACA' : '#CBD5E1'}`, borderRadius: 8, padding: '8px 12px', marginBottom: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, opacity: st === 'done' ? .8 : 1, transition: "all .2s", cursor: "pointer" }} onClick={() => setPopup({ label: a.nombre, area: a.area, areaKey: a.area_key, hora: a.hora, resp: a.responsable, entregable: a.entregable, estado: st, isProc: true, id: a.id })}>
                               <div style={{ flex: 1 }}>
                                 <div style={{ fontSize: 13, fontWeight: 500, color: st === 'done' ? '#94A3B8' : '#1E293B', textDecoration: st === 'done' ? 'line-through' : 'none', lineHeight: 1.3 }}>{a.nombre}</div>
                                 <div style={{ display: 'flex', gap: 4, marginTop: 4, flexWrap: 'wrap', alignItems: 'center' }}>
