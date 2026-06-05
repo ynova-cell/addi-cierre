@@ -6,6 +6,9 @@ const supabase = createClient(
   process.env.REACT_APP_SUPABASE_KEY
 );
 
+const DAYS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes'];
+const TODAY_IDX = Math.min(4, Math.max(0, (new Date().getDay() || 1) - 1));
+
 const AREA_COLORS = {
   OPS: { bg: '#EEF2FF', text: '#3730A3', border: '#C7D2FE' },
   CONTABILIDAD: { bg: '#ECFDF5', text: '#065F46', border: '#A7F3D0' },
@@ -18,261 +21,384 @@ const AREA_COLORS = {
 const STATUS_CONFIG = {
   done: { label: 'Completado', bg: '#ECFDF5', text: '#065F46', dot: '#10B981' },
   active: { label: 'En curso', bg: '#EFF6FF', text: '#1E40AF', dot: '#3B82F6' },
-  blocked: { label: 'Bloqueado', bg: '#FEF2F2', text: '#991B1B', dot: '#EF4444' },
+  late: { label: 'Retrasado', bg: '#FEF2F2', text: '#991B1B', dot: '#EF4444' },
   pending: { label: 'Pendiente', bg: '#F8FAFC', text: '#64748B', dot: '#CBD5E1' },
 };
 
+const ETE_NODES = {
+  t0: [
+    { label: 'Saldos JP Morgan', area: 'OPS', areaKey: 'OPS', hora: '16:00–16:15', resp: 'Juan Esteban / Karen Caicedo', entregable: 'Sheets cash visibility', estado: 'done' },
+    { label: 'Descarga movimientos', area: 'OPS', areaKey: 'OPS', hora: '16:15–16:30', resp: 'Juan Esteban / Karen Caicedo', entregable: 'Archivo mov bancarios CF', estado: 'done' },
+    { label: 'Contabilización Netsuite', area: 'OPS', areaKey: 'OPS', hora: '16:30–17:00', resp: 'Raúl Morales / Karen Caicedo', entregable: 'Plano en Drive', estado: 'done' },
+    { label: 'Cierre JP Morgan', area: 'OPS', areaKey: 'OPS', hora: '17:00–17:30', resp: 'Jhon Carvajal / Maria Valentina', entregable: 'Asana + Slack confirmación', estado: 'active' },
+    { label: 'Reexpresión USD', area: 'CONTABILIDAD', areaKey: 'CONTABILIDAD', hora: '17:30–18:00', resp: 'Jorge Salamanca / Vannessa Palma', entregable: 'Asana aprobación + Slack', estado: 'pending' },
+  ],
+  mad: [
+    { label: 'Cierre depósitos', area: 'DATA', areaKey: 'DATA', hora: '~03:00', resp: 'Elmer Ortega / Julio Alfonso', entregable: 'Proceso automático', estado: 'pending' },
+    { label: 'Tabla balance', area: 'DATA', areaKey: 'DATA', hora: '~05:45', resp: 'Leonardo Ferreyra / Julio Alfonso', entregable: 'Tabla DB + tabla AWS', estado: 'pending' },
+    { label: 'Recepción AWS', area: 'DATA', areaKey: 'DATA', hora: '~06:30', resp: 'Julio Alfonso', entregable: 'Alerta recepción insumos', estado: 'pending' },
+    { label: 'Cron SIREG', area: 'SIREG', areaKey: 'SIREG', hora: '~06:45', resp: 'Yesica Nova / Stefanny Rincón', entregable: 'Reportes SIREG generados', estado: 'pending' },
+  ],
+  man: [
+    { label: 'Saldos todos bancos', area: 'OPS', areaKey: 'OPS', hora: '07:00–07:15', resp: 'Juan Esteban / Karen Caicedo', entregable: 'Sheets cash visibility', estado: 'pending' },
+    { label: 'Contabilización otros', area: 'OPS', areaKey: 'OPS', hora: '07:30–07:45', resp: 'Juan Esteban / Karen Caicedo', entregable: 'Archivo plano Drive', estado: 'pending' },
+    { label: 'Conciliaciones OPS', area: 'OPS', areaKey: 'OPS', hora: '07:45–08:00', resp: 'Raúl Morales / Juan Esteban', entregable: 'Asana + Slack', estado: 'pending' },
+    { label: 'Inversiones CTB', area: 'CONTABILIDAD', areaKey: 'CONTABILIDAD', hora: '~10:00', resp: 'Jorge Salamanca / Hector Ovalle', entregable: 'Asana + Slack', estado: 'pending' },
+    { label: 'Cierre admin.', area: 'TESORERIA', areaKey: 'TESORERIA', hora: '~10:00', resp: 'Michael Cobos / Maribel Gonzalez', entregable: 'Asana + Slack', estado: 'pending' },
+  ],
+  tar: [
+    { label: '2do cierre Netsuite', area: 'DATA', areaKey: 'DATA', hora: '~12:30', resp: 'Leonardo Ferreyra / Julio Alfonso', entregable: 'Proceso automático', estado: 'pending' },
+    { label: 'Formatos 281/458', area: 'SIREG', areaKey: 'SIREG', hora: '~14:00', resp: 'Reporting', entregable: 'Formatos generados', estado: 'pending' },
+    { label: 'Confirm. 281', area: 'CONTABILIDAD', areaKey: 'CONTABILIDAD', hora: '~15:00', resp: 'Contabilidad', entregable: 'Formato confirmado', estado: 'pending' },
+    { label: 'Confirm. 458', area: 'RIESGOS', areaKey: 'RIESGOS', hora: '~16:00', resp: 'Riesgos', entregable: 'Formato confirmado', estado: 'pending' },
+    { label: 'Transmisión SFC ✓', area: 'RIESGOS', areaKey: 'RIESGOS', hora: '~17:00', resp: 'Riesgos', entregable: 'Transmitido a SFC', estado: 'pending' },
+  ],
+};
+
+const WEEK_DATA = {
+  0: { retrasos: 3, pct: 87, criticas: 1, diasOk: 3, trend: '+1', days: [0, 2, 0, 1, 0], top: [{ n: 'Reexpresión USD JP Morgan', c: 4, cl: 'red' }, { n: 'Cierre bancario JP Morgan', c: 2, cl: 'yellow' }, { n: 'Confirmación formato 458', c: 2, cl: 'yellow' }, { n: 'Generación tabla balance', c: 1, cl: 'green' }], sla: [{ a: 'OPS', p: 92 }, { a: 'Contabilidad', p: 88 }, { a: 'Data', p: 95 }, { a: 'Riesgos', p: 83 }, { a: 'Tesorería', p: 100 }] },
+  '-1': { retrasos: 5, pct: 74, criticas: 3, diasOk: 1, trend: '+3', days: [1, 2, 1, 0, 1], top: [{ n: 'Reexpresión USD JP Morgan', c: 3, cl: 'red' }, { n: 'Conciliaciones bancos', c: 2, cl: 'yellow' }, { n: 'Cierre depósitos', c: 2, cl: 'yellow' }, { n: 'Confirmación formato 281', c: 1, cl: 'green' }], sla: [{ a: 'OPS', p: 78 }, { a: 'Contabilidad', p: 72 }, { a: 'Data', p: 85 }, { a: 'Riesgos', p: 70 }, { a: 'Tesorería', p: 90 }] },
+  '-2': { retrasos: 1, pct: 95, criticas: 0, diasOk: 5, trend: '-2', days: [0, 0, 0, 1, 0], top: [{ n: 'Cierre bancario JP Morgan', c: 1, cl: 'green' }, { n: 'Reexpresión USD JP Morgan', c: 1, cl: 'green' }], sla: [{ a: 'OPS', p: 98 }, { a: 'Contabilidad', p: 95 }, { a: 'Data', p: 100 }, { a: 'Riesgos', p: 92 }, { a: 'Tesorería', p: 100 }] },
+};
+
 export default function App() {
+  const [tab, setTab] = useState('ete');
   const [actividades, setActividades] = useState([]);
-  const [selected, setSelected] = useState(null);
-  const [filterArea, setFilterArea] = useState('Todos');
-  const [filterStatus, setFilterStatus] = useState('Todos');
+  const [activeDay, setActiveDay] = useState(TODAY_IDX);
+  const [activeWeek, setActiveWeek] = useState(0);
+  const [now, setNow] = useState(new Date());
+  const [popup, setPopup] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [lastUpdate, setLastUpdate] = useState(null);
 
   const fetchData = useCallback(async () => {
     const { data } = await supabase.from('actividades').select('*').order('id');
-    if (data) {
-      setActividades(data);
-      setLastUpdate(new Date());
-    }
+    if (data) setActividades(data);
     setLoading(false);
   }, []);
 
   useEffect(() => {
     fetchData();
-    const channel = supabase
-      .channel('actividades-changes')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'actividades' }, fetchData)
-      .subscribe();
-    return () => supabase.removeChannel(channel);
+    const channel = supabase.channel('changes').on('postgres_changes', { event: '*', schema: 'public', table: 'actividades' }, fetchData).subscribe();
+    const timer = setInterval(() => setNow(new Date()), 30000);
+    return () => { supabase.removeChannel(channel); clearInterval(timer); };
   }, [fetchData]);
 
   const updateEstado = async (id, estado) => {
     await supabase.from('actividades').update({ estado }).eq('id', id);
     setActividades(prev => prev.map(a => a.id === id ? { ...a, estado } : a));
-    if (selected?.id === id) setSelected(prev => ({ ...prev, estado }));
   };
 
-  const areas = ['Todos', 'OPS', 'CONTABILIDAD', 'DATA', 'RIESGOS', 'TESORERIA'];
+  const getDateForDay = (offset) => {
+    const d = new Date();
+    const day = d.getDay();
+    const mon = new Date(d);
+    mon.setDate(d.getDate() - (day === 0 ? 6 : day - 1) + offset);
+    return mon;
+  };
 
-  const visible = actividades.filter(a => {
-    const aOk = filterArea === 'Todos' || a.area_key === filterArea;
-    const sOk = filterStatus === 'Todos' || a.estado === filterStatus;
-    return aOk && sOk;
-  });
+  const fmtDate = (d) => d.toLocaleDateString('es-CO', { day: 'numeric', month: 'short' });
+  const fmtDateLong = (d) => d.toLocaleDateString('es-CO', { weekday: 'long', day: 'numeric', month: 'short' });
 
-  const t0 = visible.filter(a => a.turno === 'T+0');
-  const t1 = visible.filter(a => a.turno === 'T+1');
-
+  const nowMin = now.getHours() * 60 + now.getMinutes();
+  const isToday = activeDay === TODAY_IDX;
+  const timePct = isToday ? Math.min(100, Math.max(0, Math.round((nowMin - 16 * 60) / (18 * 60 - 16 * 60) * 100))) : 0;
   const done = actividades.filter(a => a.estado === 'done').length;
-  const active = actividades.filter(a => a.estado === 'active').length;
-  const blocked = actividades.filter(a => a.estado === 'blocked').length;
-  const pct = actividades.length ? Math.round(done / actividades.length * 100) : 0;
+  const procPct = actividades.length ? Math.round(done / actividades.length * 100) : 0;
+  const expPct = isToday ? Math.min(100, Math.round(actividades.filter(s => nowMin > s.minStart + 15).length / (actividades.length || 1) * 100)) : 0;
+  const procStatus = procPct - expPct >= 0 ? 'ok' : procPct - expPct >= -20 ? 'warn' : 'danger';
 
-  const getPredecesor = (id) => actividades.filter(a => a.bloquea?.includes(id));
-  const getBloquea = (a) => (a.bloquea || []).map(b => actividades.find(x => x.id === b)?.nombre).filter(Boolean);
+  const s = { fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', background: '#F1F5F9', minHeight: '100vh' };
 
   if (loading) return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', background: '#F8FAFC' }}>
+    <div style={{ ...s, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       <div style={{ textAlign: 'center' }}>
-        <div style={{ width: 40, height: 40, border: '3px solid #E2E8F0', borderTop: '3px solid #3B82F6', borderRadius: '50%', animation: 'spin 1s linear infinite', margin: '0 auto 16px' }} />
-        <p style={{ color: '#64748B', fontSize: 14 }}>Cargando dashboard...</p>
+        <div style={{ width: 40, height: 40, border: '3px solid #E2E8F0', borderTop: '3px solid #3B82F6', borderRadius: '50%', animation: 'spin 1s linear infinite', margin: '0 auto 12px' }} />
+        <p style={{ color: '#64748B', fontSize: 14 }}>Cargando...</p>
       </div>
-      <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
+      <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
     </div>
   );
 
   return (
-    <div style={{ minHeight: '100vh', background: '#F1F5F9', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>
+    <div style={s}>
       <style>{`
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.5} }
-        .step-row:hover { background: #F8FAFC !important; }
-        .step-row.sel { background: #EFF6FF !important; border-color: #BFDBFE !important; }
-        select { appearance: none; cursor: pointer; }
-        ::-webkit-scrollbar { width: 6px; } ::-webkit-scrollbar-track { background: transparent; } ::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 3px; }
+        *{box-sizing:border-box;margin:0;padding:0}
+        @keyframes spin{to{transform:rotate(360deg)}}
+        @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+        @keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
+        @keyframes glow{0%{box-shadow:0 0 0 0 #DCFCE7}100%{box-shadow:0 0 0 8px transparent}}
+        .step-card:hover{background:#F8FAFC!important}
+        .ete-node:hover .ete-dot{transform:scale(1.12)}
+        ::-webkit-scrollbar{width:5px;height:5px}
+        ::-webkit-scrollbar-track{background:transparent}
+        ::-webkit-scrollbar-thumb{background:#CBD5E1;border-radius:3px}
       `}</style>
 
-      {/* Header */}
-      <div style={{ background: '#0F172A', borderBottom: '1px solid #1E293B', padding: '0 32px' }}>
-        <div style={{ maxWidth: 1400, margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: 56 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-            <div style={{ width: 32, height: 32, background: '#3B82F6', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <span style={{ color: '#fff', fontSize: 14, fontWeight: 700 }}>A</span>
-            </div>
-            <div>
-              <div style={{ color: '#F1F5F9', fontSize: 15, fontWeight: 600 }}>ADDI CF — Monitor de Cierre</div>
-              <div style={{ color: '#64748B', fontSize: 11 }}>Proceso diario regulatorio</div>
-            </div>
+      {/* HEADER */}
+      <div style={{ background: '#F8FAFC', borderBottom: '1px solid #E2E8F0', padding: '0 24px', position: 'sticky', top: 0, zIndex: 100 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', height: 52 }}>
+          <div>
+            <div style={{ fontSize: 15, fontWeight: 700, color: '#0F172A' }}>ADDI CF — Monitor de procesos</div>
+            <div style={{ fontSize: 11, color: '#64748B' }}>Proceso diario Finances</div>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
-            {lastUpdate && <span style={{ color: '#475569', fontSize: 12 }}>Actualizado {lastUpdate.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })}</span>}
-            <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#10B981', animation: 'pulse 2s infinite' }} />
-            <span style={{ color: '#10B981', fontSize: 12 }}>En vivo</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: '#64748B' }}>
+            <div style={{ width: 7, height: 7, borderRadius: '50%', background: '#10B981', animation: 'pulse 2s infinite' }} />
+            <span>En vivo</span>
+            <span style={{ fontWeight: 600, color: '#0F172A' }}>{now.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })}</span>
+            <span>{now.toLocaleDateString('es-CO', { weekday: 'long', day: 'numeric', month: 'short' })}</span>
           </div>
+        </div>
+        <div style={{ display: 'flex', borderTop: '1px solid #F1F5F9' }}>
+          {[['ete', 'End to End'], ['proceso', 'Proceso diario'], ['indicadores', 'Indicadores']].map(([id, label]) => (
+            <button key={id} onClick={() => setTab(id)} style={{ padding: '10px 20px', fontSize: 13, fontWeight: 500, color: tab === id ? '#1E40AF' : '#64748B', border: 'none', background: 'none', cursor: 'pointer', borderBottom: `2px solid ${tab === id ? '#3B82F6' : 'transparent'}`, transition: 'all .15s' }}>{label}</button>
+          ))}
         </div>
       </div>
 
-      <div style={{ maxWidth: 1400, margin: '0 auto', padding: '24px 32px', display: 'grid', gridTemplateColumns: selected ? '1fr 380px' : '1fr', gap: 24 }}>
-        <div>
-          {/* KPIs */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 24 }}>
-            {[
-              { label: 'Avance total', val: `${pct}%`, color: pct >= 80 ? '#10B981' : pct >= 40 ? '#F59E0B' : '#EF4444' },
-              { label: 'Completadas', val: `${done} / ${actividades.length}`, color: '#10B981' },
-              { label: 'En curso', val: active, color: active > 0 ? '#3B82F6' : '#64748B' },
-              { label: 'Bloqueadas', val: blocked, color: blocked > 0 ? '#EF4444' : '#64748B' },
-            ].map((k, i) => (
-              <div key={i} style={{ background: '#fff', border: '1px solid #E2E8F0', borderRadius: 12, padding: '16px 20px' }}>
-                <div style={{ fontSize: 12, color: '#64748B', marginBottom: 6, fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{k.label}</div>
-                <div style={{ fontSize: 28, fontWeight: 700, color: k.color }}>{k.val}</div>
-              </div>
-            ))}
-          </div>
+      <div style={{ maxWidth: 960, margin: '0 auto', padding: '16px 24px' }}>
 
-          {/* Progress bar */}
-          <div style={{ background: '#fff', border: '1px solid #E2E8F0', borderRadius: 12, padding: '16px 20px', marginBottom: 24 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
-              <span style={{ fontSize: 13, fontWeight: 500, color: '#1E293B' }}>Progreso del cierre</span>
-              <span style={{ fontSize: 13, color: '#64748B' }}>{done} de {actividades.length} actividades</span>
+        {/* TAB: END TO END */}
+        {tab === 'ete' && (
+          <div>
+            {popup && (
+              <div onClick={(e) => e.target === e.currentTarget && setPopup(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,.4)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <div style={{ background: '#fff', borderRadius: 14, padding: 20, width: 320, maxWidth: '90vw', boxShadow: '0 20px 50px rgba(0,0,0,.18)' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 14 }}>
+                    <div style={{ fontSize: 14, fontWeight: 600, color: '#0F172A', flex: 1, marginRight: 8, lineHeight: 1.3 }}>{popup.label}</div>
+                    <button onClick={() => setPopup(null)} style={{ background: 'none', border: 'none', fontSize: 22, color: '#94A3B8', cursor: 'pointer', lineHeight: 1 }}>×</button>
+                  </div>
+                  {[['Área', <span style={{ fontSize: 11, padding: '3px 10px', borderRadius: 99, background: AREA_COLORS[popup.areaKey]?.bg || '#F8FAFC', color: AREA_COLORS[popup.areaKey]?.text || '#475569', fontWeight: 500 }}>{popup.area}</span>], ['Horario', popup.hora], ['Responsable', popup.resp], ['Entregable', popup.entregable], ['Estado', <span style={{ fontSize: 11, padding: '3px 10px', borderRadius: 99, background: STATUS_CONFIG[popup.estado]?.bg, color: STATUS_CONFIG[popup.estado]?.text, fontWeight: 500 }}>{STATUS_CONFIG[popup.estado]?.label}</span>]].map(([key, val]) => (
+                    <div key={key} style={{ marginBottom: 10 }}>
+                      <div style={{ fontSize: 10, fontWeight: 700, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 3 }}>{key}</div>
+                      <div style={{ fontSize: 13, color: '#1E293B' }}>{val}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            <div style={{ background: '#fff', borderRadius: 12, border: '1px solid #E2E8F0', padding: 20, overflowX: 'auto' }}>
+              <div style={{ fontSize: 14, fontWeight: 600, color: '#1E293B', marginBottom: 3 }}>Flujo completo del proceso de cierre</div>
+              <div style={{ fontSize: 11, color: '#94A3B8', marginBottom: 20 }}>Haz clic en cualquier nodo para ver el detalle completo</div>
+              {[['T+0 Tarde', 't0'], ['T+1 Madrugada', 'mad'], ['T+1 Mañana', 'man'], ['T+1 Tarde', 'tar']].map(([label, key], pi) => (
+                <div key={key}>
+                  {pi > 0 && <hr style={{ border: 'none', borderTop: '1px dashed #E2E8F0', margin: '4px 0 4px 80px' }} />}
+                  <div style={{ display: 'grid', gridTemplateColumns: '80px 1fr', gap: '0 16px' }}>
+                    <div style={{ fontSize: 10, fontWeight: 700, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '.04em', paddingTop: 14, textAlign: 'right', lineHeight: 1.3 }}>{label}</div>
+                    <div style={{ display: 'flex', alignItems: 'flex-start', overflowX: 'auto', paddingBottom: 4 }}>
+                      {ETE_NODES[key].map((node, i) => {
+                        const ac = AREA_COLORS[node.areaKey] || AREA_COLORS.SIREG;
+                        const dotBg = node.estado === 'done' ? '#10B981' : node.estado === 'active' ? '#3B82F6' : ac.bg;
+                        const dotBorder = node.estado === 'done' ? '#10B981' : node.estado === 'active' ? '#3B82F6' : ac.border;
+                        const dotText = node.estado === 'done' || node.estado === 'active' ? '#fff' : ac.text;
+                        const areaShort = node.area === 'CONTABILIDAD' ? 'CTB' : node.area === 'TESORERIA' ? 'TESO' : node.area;
+                        return (
+                          <React.Fragment key={i}>
+                            <div className="ete-node" onClick={() => setPopup(node)} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, cursor: 'pointer', flexShrink: 0 }}>
+                              <div className="ete-dot" style={{ width: 36, height: 36, borderRadius: '50%', border: `2px solid ${dotBorder}`, background: dotBg, color: dotText, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, fontWeight: 700, transition: 'transform .15s', boxShadow: node.estado === 'active' ? '0 0 0 4px #DBEAFE' : 'none' }}>{areaShort}</div>
+                              <div style={{ fontSize: 9, color: '#94A3B8', textAlign: 'center', maxWidth: 60, lineHeight: 1.2 }}>{node.label}</div>
+                            </div>
+                            {i < ETE_NODES[key].length - 1 && <div style={{ flex: 1, height: 2, background: '#E2E8F0', minWidth: 12, marginTop: 18, position: 'relative' }}><div style={{ position: 'absolute', right: -4, top: -3, border: '4px solid transparent', borderLeftColor: '#CBD5E1' }} /></div>}
+                          </React.Fragment>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              ))}
+              <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginTop: 14, paddingTop: 12, borderTop: '1px solid #F1F5F9' }}>
+                {[['#6366F1', 'OPS'], ['#10B981', 'Contabilidad'], ['#3B82F6', 'Data'], ['#F59E0B', 'Riesgos'], ['#F43F5E', 'Tesorería'], ['#94A3B8', 'SIREG']].map(([color, label]) => (
+                  <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: '#64748B' }}>
+                    <div style={{ width: 9, height: 9, borderRadius: '50%', background: color }} />{label}
+                  </div>
+                ))}
+              </div>
             </div>
-            <div style={{ height: 8, background: '#F1F5F9', borderRadius: 99 }}>
-              <div style={{ height: '100%', width: `${pct}%`, background: pct >= 80 ? '#10B981' : pct >= 40 ? '#F59E0B' : '#EF4444', borderRadius: 99, transition: 'width .5s ease' }} />
+          </div>
+        )}
+
+        {/* TAB: PROCESO DIARIO */}
+        {tab === 'proceso' && (
+          <div>
+            {/* Day selector */}
+            <div style={{ display: 'flex', gap: 6, marginBottom: 14, flexWrap: 'wrap' }}>
+              {DAYS.map((d, i) => (
+                <button key={i} onClick={() => setActiveDay(i)} style={{ fontSize: 12, padding: '4px 12px', borderRadius: 99, border: `1px solid ${activeDay === i ? '#1E293B' : i === TODAY_IDX ? '#3B82F6' : '#E2E8F0'}`, background: activeDay === i ? '#1E293B' : '#fff', color: activeDay === i ? '#fff' : i === TODAY_IDX ? '#1E40AF' : '#64748B', cursor: 'pointer', fontWeight: activeDay === i ? 600 : 400 }}>
+                  {d} <span style={{ opacity: .6, fontSize: 10 }}>{fmtDate(getDateForDay(i))}</span>
+                </button>
+              ))}
             </div>
-            <div style={{ display: 'flex', gap: 20, marginTop: 12 }}>
-              {Object.entries(STATUS_CONFIG).map(([k, v]) => (
-                <div key={k} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                  <div style={{ width: 8, height: 8, borderRadius: '50%', background: v.dot }} />
-                  <span style={{ fontSize: 12, color: '#64748B' }}>{v.label}: {actividades.filter(a => a.estado === k).length}</span>
+
+            {/* Alert */}
+            {isToday && expPct > 0 && (
+              <div style={{ borderRadius: 8, padding: '8px 12px', marginBottom: 12, fontSize: 12, fontWeight: 500, display: 'flex', alignItems: 'center', gap: 6, background: procStatus === 'ok' ? '#ECFDF5' : procStatus === 'warn' ? '#FFFBEB' : '#FEF2F2', color: procStatus === 'ok' ? '#065F46' : procStatus === 'warn' ? '#92400E' : '#991B1B', border: `1px solid ${procStatus === 'ok' ? '#A7F3D0' : procStatus === 'warn' ? '#FDE68A' : '#FECACA'}` }}>
+                {procStatus === 'ok' ? '✅' : procStatus === 'warn' ? '⚠️' : '🚨'}
+                {procStatus === 'ok' ? `Proceso al día — ${done}/${actividades.length} completadas` : procStatus === 'warn' ? `Retrasado — deberías ir en ${expPct}% pero vas en ${procPct}%` : `Alerta crítica — ${expPct - procPct}% de retraso`}
+              </div>
+            )}
+
+            {/* Bars */}
+            <div style={{ background: '#fff', borderRadius: 12, border: '1px solid #E2E8F0', padding: '14px 16px', marginBottom: 14 }}>
+              {[
+                { label: 'Hora del día', pct: timePct, color: '#3B82F6', shadow: '#DBEAFE', val: now.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' }), showMarker: false },
+                { label: 'Progreso del proceso', pct: procPct, color: procStatus === 'ok' ? '#10B981' : procStatus === 'warn' ? '#F59E0B' : '#EF4444', shadow: procStatus === 'ok' ? '#DCFCE7' : procStatus === 'warn' ? '#FEF3C7' : '#FEE2E2', val: `${procPct}%`, showMarker: true },
+              ].map(bar => (
+                <div key={bar.label} style={{ marginBottom: 10 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5 }}>
+                    <span style={{ fontSize: 11, fontWeight: 500, color: '#64748B' }}>{bar.label}</span>
+                    <span style={{ fontSize: 12, fontWeight: 600, color: '#1E293B' }}>{bar.val}</span>
+                  </div>
+                  <div style={{ height: 8, background: '#F1F5F9', borderRadius: 99, position: 'relative' }}>
+                    <div style={{ height: '100%', width: `${bar.pct}%`, background: bar.color, borderRadius: 99, transition: 'width .6s', position: 'relative' }}>
+                      <div style={{ width: 16, height: 16, borderRadius: '50%', background: bar.color, border: '2px solid #fff', position: 'absolute', right: -8, top: -4, boxShadow: `0 0 0 3px ${bar.shadow}` }} />
+                    </div>
+                    {bar.showMarker && expPct > 0 && (
+                      <div style={{ position: 'absolute', top: -6, left: `${expPct}%`, width: 2, height: 20, background: '#94A3B8', borderRadius: 1 }}>
+                        <div style={{ position: 'absolute', top: -13, left: '50%', transform: 'translateX(-50%)', fontSize: 9, color: '#94A3B8', whiteSpace: 'nowrap' }}>esperado</div>
+                      </div>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
-          </div>
 
-          {/* Filters */}
-          <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap', alignItems: 'center' }}>
-            {areas.map(a => (
-              <button key={a} onClick={() => setFilterArea(a)} style={{ fontSize: 12, padding: '5px 14px', borderRadius: 99, border: '1px solid', cursor: 'pointer', fontWeight: 500, borderColor: filterArea === a ? '#3B82F6' : '#E2E8F0', background: filterArea === a ? '#EFF6FF' : '#fff', color: filterArea === a ? '#1E40AF' : '#64748B', transition: 'all .15s' }}>{a}</button>
-            ))}
-            <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} style={{ fontSize: 12, padding: '5px 12px', borderRadius: 8, border: '1px solid #E2E8F0', background: '#fff', color: '#1E293B', marginLeft: 'auto' }}>
-              <option value="Todos">Todos los estados</option>
-              {Object.entries(STATUS_CONFIG).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
-            </select>
-          </div>
-
-          {/* Timeline T+0 */}
-          <TimelineBlock title="T+0 — Cierre del día anterior" steps={t0} selected={selected} onSelect={setSelected} updateEstado={updateEstado} />
-          <div style={{ marginTop: 20 }} />
-          {/* Timeline T+1 */}
-          <TimelineBlock title="T+1 — Proceso de cierre principal" steps={t1} selected={selected} onSelect={setSelected} updateEstado={updateEstado} />
-        </div>
-
-        {/* Detail panel */}
-        {selected && (
-          <DetailPanel
-            act={selected}
-            all={actividades}
-            onClose={() => setSelected(null)}
-            onUpdate={updateEstado}
-            getPredecesor={getPredecesor}
-            getBloquea={getBloquea}
-          />
-        )}
-      </div>
-    </div>
-  );
-}
-
-function TimelineBlock({ title, steps, selected, onSelect, updateEstado }) {
-  if (!steps.length) return null;
-  return (
-    <div style={{ background: '#fff', border: '1px solid #E2E8F0', borderRadius: 12, overflow: 'hidden' }}>
-      <div style={{ padding: '14px 20px', borderBottom: '1px solid #F1F5F9', background: '#F8FAFC' }}>
-        <span style={{ fontSize: 13, fontWeight: 600, color: '#1E293B' }}>{title}</span>
-        <span style={{ marginLeft: 8, fontSize: 12, color: '#94A3B8' }}>{steps.length} actividades</span>
-      </div>
-      <div>
-        {steps.map((a, i) => <StepRow key={a.id} act={a} isLast={i === steps.length - 1} isSelected={selected?.id === a.id} onSelect={onSelect} onUpdate={updateEstado} />)}
-      </div>
-    </div>
-  );
-}
-
-function StepRow({ act, isLast, isSelected, onSelect, onUpdate }) {
-  const sc = STATUS_CONFIG[act.estado] || STATUS_CONFIG.pending;
-  const ac = AREA_COLORS[act.area_key] || AREA_COLORS.SIREG;
-  return (
-    <div className={`step-row${isSelected ? ' sel' : ''}`} onClick={() => onSelect(isSelected ? null : act)} style={{ display: 'grid', gridTemplateColumns: '80px 2px 1fr auto', gap: '0 16px', padding: '12px 20px', borderBottom: isLast ? 'none' : '1px solid #F8FAFC', cursor: 'pointer', transition: 'background .15s', border: isSelected ? '1px solid #BFDBFE' : '1px solid transparent', borderRadius: isSelected ? 8 : 0, margin: isSelected ? '2px 8px' : 0 }}>
-      <div style={{ fontSize: 12, color: '#94A3B8', textAlign: 'right', paddingTop: 2, lineHeight: 1.4 }}>{act.hora}</div>
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-        <div style={{ width: 12, height: 12, borderRadius: '50%', background: sc.dot, flexShrink: 0, marginTop: 4, boxShadow: act.estado === 'active' ? `0 0 0 3px ${sc.bg}` : 'none' }} />
-        {!isLast && <div style={{ width: 2, background: '#F1F5F9', flex: 1, minHeight: 24, marginTop: 2 }} />}
-      </div>
-      <div>
-        <div style={{ fontSize: 13, fontWeight: 500, color: '#1E293B', lineHeight: 1.4 }}>{act.nombre}</div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4, flexWrap: 'wrap' }}>
-          <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 99, background: ac.bg, color: ac.text, border: `1px solid ${ac.border}`, fontWeight: 500 }}>{act.area}</span>
-          <span style={{ fontSize: 12, color: '#94A3B8' }}>{act.responsable}</span>
-        </div>
-      </div>
-      <div style={{ fontSize: 11, padding: '3px 10px', borderRadius: 99, background: sc.bg, color: sc.text, fontWeight: 500, whiteSpace: 'nowrap', alignSelf: 'flex-start' }}>{sc.label}</div>
-    </div>
-  );
-}
-
-function DetailPanel({ act, all, onClose, onUpdate, getPredecesor, getBloquea }) {
-  const sc = STATUS_CONFIG[act.estado] || STATUS_CONFIG.pending;
-  const ac = AREA_COLORS[act.area_key] || AREA_COLORS.SIREG;
-  const preds = getPredecesor(act.id);
-  const bloqs = getBloquea(act);
-
-  return (
-    <div style={{ background: '#fff', border: '1px solid #E2E8F0', borderRadius: 12, padding: 0, height: 'fit-content', position: 'sticky', top: 24, overflow: 'hidden' }}>
-      <div style={{ background: '#0F172A', padding: '16px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-        <div style={{ flex: 1, marginRight: 12 }}>
-          <div style={{ fontSize: 14, fontWeight: 600, color: '#F1F5F9', lineHeight: 1.4 }}>{act.nombre}</div>
-          <div style={{ fontSize: 12, color: '#64748B', marginTop: 4 }}>{act.hora} · {act.turno}</div>
-        </div>
-        <button onClick={onClose} style={{ background: 'none', border: 'none', color: '#475569', cursor: 'pointer', fontSize: 20, lineHeight: 1, padding: '0 2px' }}>×</button>
-      </div>
-
-      <div style={{ padding: '16px 20px' }}>
-        {/* Estado selector */}
-        <div style={{ marginBottom: 16 }}>
-          <div style={{ fontSize: 11, fontWeight: 600, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>Estado</div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2,1fr)', gap: 6 }}>
-            {Object.entries(STATUS_CONFIG).map(([k, v]) => (
-              <button key={k} onClick={() => onUpdate(act.id, k)} style={{ padding: '8px 10px', borderRadius: 8, border: `1px solid ${act.estado === k ? v.dot : '#E2E8F0'}`, background: act.estado === k ? v.bg : '#fff', color: act.estado === k ? v.text : '#64748B', fontSize: 12, fontWeight: act.estado === k ? 600 : 400, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, transition: 'all .15s' }}>
-                <div style={{ width: 8, height: 8, borderRadius: '50%', background: v.dot, flexShrink: 0 }} />
-                {v.label}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div style={{ borderTop: '1px solid #F1F5F9', paddingTop: 16 }}>
-          {[
-            { label: 'Área', val: <span style={{ fontSize: 12, padding: '3px 10px', borderRadius: 99, background: ac.bg, color: ac.text, border: `1px solid ${ac.border}`, fontWeight: 500 }}>{act.area}</span> },
-            { label: 'Responsable', val: act.responsable },
-            { label: 'Entregable', val: act.entregable },
-            { label: 'Predecesoras', val: preds.length ? preds.map(p => p.nombre).join(' · ') : 'Ninguna' },
-            { label: 'Desbloquea', val: bloqs.length ? bloqs.join(' · ') : 'Ninguna' },
-            act.observacion && { label: 'Obs.', val: act.observacion, warn: true },
-          ].filter(Boolean).map((row, i) => (
-            <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: 2, marginBottom: 12 }}>
-              <div style={{ fontSize: 11, fontWeight: 600, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{row.label}</div>
-              <div style={{ fontSize: 13, color: row.warn ? '#D97706' : '#1E293B', lineHeight: 1.5 }}>{row.val}</div>
+            {/* Flow */}
+            <div style={{ background: '#fff', borderRadius: 12, border: '1px solid #E2E8F0', overflow: 'hidden' }}>
+              {['T+0', 'T+1'].map(turno => {
+                const steps = actividades.filter(a => a.turno === turno);
+                if (!steps.length) return null;
+                const dt = turno === 'T+0' ? getDateForDay(activeDay) : getDateForDay(activeDay + 1);
+                return (
+                  <div key={turno}>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '.05em', padding: '10px 16px 6px 96px', background: '#F8FAFC', borderBottom: '1px solid #F1F5F9', display: 'flex', alignItems: 'center', gap: 8 }}>
+                      {turno}
+                      <span style={{ fontSize: 11, fontWeight: 500, color: '#3B82F6', background: '#EFF6FF', padding: '2px 8px', borderRadius: 99 }}>{fmtDateLong(dt)}</span>
+                    </div>
+                    {steps.map((a, i) => {
+                      const st = a.estado;
+                      const isLate = isToday && st !== 'done' && nowMin > a.minStart + 30;
+                      const isNow = isToday && st !== 'done' && nowMin >= a.minStart && nowMin <= a.minStart + 30;
+                      const dotClass = st === 'done' ? 'done' : isNow ? 'active' : isLate ? 'late' : 'pending';
+                      const sc = STATUS_CONFIG[dotClass] || STATUS_CONFIG.pending;
+                      const ac2 = AREA_COLORS[a.area_key] || AREA_COLORS.SIREG;
+                      const isLast = i === steps.length - 1;
+                      return (
+                        <div key={a.id} style={{ display: 'grid', gridTemplateColumns: '64px 20px 1fr', gap: '0 12px', padding: '4px 16px 0' }}>
+                          <div style={{ fontSize: 11, color: '#94A3B8', textAlign: 'right', paddingTop: 8 }}>{a.hora}</div>
+                          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                            <div style={{ width: 14, height: 14, borderRadius: '50%', border: `2px solid ${sc.dot}`, background: st === 'done' ? sc.dot : isNow ? sc.dot : isLate ? '#FEF2F2' : '#F8FAFC', flexShrink: 0, marginTop: 7, boxShadow: isNow ? `0 0 0 3px ${sc.bg}` : 'none', transition: 'all .3s' }} />
+                            {!isLast && <div style={{ width: 2, flex: 1, minHeight: 10, marginTop: 2, background: st === 'done' ? '#10B981' : isNow ? 'linear-gradient(#10B981,#3B82F6)' : isLate ? '#FECACA' : '#E2E8F0' }} />}
+                          </div>
+                          <div>
+                            <div className="step-card" style={{ background: st === 'done' ? '#F0FDF4' : isNow ? '#EFF6FF' : isLate ? '#FEF2F2' : '#EEF2F7', border: `1px solid ${st === 'done' ? '#BBF7D0' : isNow ? '#93C5FD' : isLate ? '#FECACA' : '#CBD5E1'}`, borderRadius: 8, padding: '8px 12px', marginBottom: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, opacity: st === 'done' ? .8 : 1, transition: 'all .2s' }}>
+                              <div style={{ flex: 1 }}>
+                                <div style={{ fontSize: 13, fontWeight: 500, color: st === 'done' ? '#94A3B8' : '#1E293B', textDecoration: st === 'done' ? 'line-through' : 'none', lineHeight: 1.3 }}>{a.nombre}</div>
+                                <div style={{ display: 'flex', gap: 4, marginTop: 4, flexWrap: 'wrap', alignItems: 'center' }}>
+                                  <span style={{ fontSize: 10, padding: '2px 7px', borderRadius: 99, background: ac2.bg, color: ac2.text, fontWeight: 500 }}>{a.area}</span>
+                                  <span style={{ fontSize: 10, padding: '2px 7px', borderRadius: 99, background: sc.bg, color: sc.text, fontWeight: 500 }}>{sc.label}</span>
+                                  <span style={{ fontSize: 10, color: '#94A3B8' }}>{a.responsable}</span>
+                                </div>
+                              </div>
+                              <button onClick={() => updateEstado(a.id, st === 'done' ? 'pending' : 'done')} style={{ fontSize: 10, padding: '3px 8px', borderRadius: 99, border: `1px solid ${st === 'done' ? '#94A3B8' : '#10B981'}`, background: 'transparent', color: st === 'done' ? '#64748B' : '#10B981', cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0 }}>{st === 'done' ? '↩' : '✓'}</button>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })}
             </div>
-          ))}
-        </div>
-
-        {act.estado === 'blocked' && (
-          <div style={{ background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 8, padding: '10px 12px', marginTop: 8 }}>
-            <div style={{ fontSize: 12, fontWeight: 600, color: '#991B1B', marginBottom: 2 }}>⚠ Actividad bloqueada</div>
-            <div style={{ fontSize: 12, color: '#DC2626' }}>Esta actividad está frenando {bloqs.length} actividad(es) dependiente(s).</div>
           </div>
         )}
+
+        {/* TAB: INDICADORES */}
+        {tab === 'indicadores' && (() => {
+          const d = WEEK_DATA[activeWeek];
+          const semStatus = d.pct >= 90 ? { c: 'g', icon: '🟢', title: 'Proceso saludable', sub: `${d.pct}% de actividades completadas a tiempo` } : d.pct >= 75 ? { c: 'y', icon: '🟡', title: 'Proceso con alertas', sub: `${d.pct}% a tiempo — revisar retrasos` } : { c: 'r', icon: '🔴', title: 'Proceso crítico', sub: `Solo ${d.pct}% a tiempo — atención inmediata` };
+          const semBg = d.pct >= 90 ? { bg: 'linear-gradient(135deg,#ECFDF5,#D1FAE5)', border: '#6EE7B7' } : d.pct >= 75 ? { bg: 'linear-gradient(135deg,#FFFBEB,#FEF3C7)', border: '#FCD34D' } : { bg: 'linear-gradient(135deg,#FEF2F2,#FEE2E2)', border: '#FCA5A5' };
+          const maxDay = Math.max(...d.days, 1);
+          return (
+            <div>
+              {/* Week selector */}
+              <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginBottom: 14, flexWrap: 'wrap' }}>
+                <span style={{ fontSize: 12, color: '#64748B', fontWeight: 500 }}>Semana:</span>
+                {[[-2, 'Hace 2 sem'], [-1, 'Semana pasada'], [0, 'Esta semana']].map(([w, label]) => (
+                  <button key={w} onClick={() => setActiveWeek(w)} style={{ fontSize: 11, padding: '4px 12px', borderRadius: 99, border: '1px solid #E2E8F0', background: activeWeek === w ? '#1E293B' : '#fff', color: activeWeek === w ? '#fff' : '#64748B', cursor: 'pointer', fontWeight: activeWeek === w ? 600 : 400 }}>{label}</button>
+                ))}
+              </div>
+
+              {/* Semáforo */}
+              <div style={{ borderRadius: 12, padding: '14px 16px', marginBottom: 14, display: 'flex', alignItems: 'center', gap: 12, background: semBg.bg, border: `1px solid ${semBg.border}` }}>
+                <div style={{ fontSize: 28 }}>{semStatus.icon}</div>
+                <div>
+                  <div style={{ fontSize: 15, fontWeight: 700, color: '#1E293B' }}>{semStatus.title}</div>
+                  <div style={{ fontSize: 11, color: '#64748B', marginTop: 2 }}>{semStatus.sub}</div>
+                </div>
+              </div>
+
+              {/* KPIs */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2,1fr)', gap: 10, marginBottom: 14 }}>
+                {[
+                  { label: 'Retrasos', val: d.retrasos, color: d.retrasos <= 2 ? '#10B981' : d.retrasos <= 4 ? '#F59E0B' : '#EF4444', trend: d.trend, trendGood: !d.trend.startsWith('+') },
+                  { label: 'A tiempo', val: `${d.pct}%`, color: d.pct >= 90 ? '#10B981' : d.pct >= 75 ? '#F59E0B' : '#EF4444', sub: 'SLA objetivo: 95%' },
+                  { label: 'Alertas críticas', val: d.criticas, color: d.criticas === 0 ? '#10B981' : d.criticas <= 1 ? '#F59E0B' : '#EF4444', sub: 'Incidentes graves' },
+                  { label: 'Días sin incidentes', val: d.diasOk, color: '#3B82F6', sub: 'de 5 días hábiles' },
+                ].map((k, i) => (
+                  <div key={i} style={{ background: '#fff', borderRadius: 12, border: '1px solid #E2E8F0', padding: '12px 14px' }}>
+                    <div style={{ fontSize: 10, fontWeight: 700, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 4 }}>{k.label}</div>
+                    <div style={{ fontSize: 26, fontWeight: 800, color: k.color, lineHeight: 1 }}>{k.val}</div>
+                    {k.trend && <div style={{ fontSize: 11, marginTop: 3, color: k.trendGood ? '#10B981' : '#EF4444' }}>{k.trendGood ? '↓' : '↑'} {k.trend.replace(/[+-]/, '')} vs sem. anterior</div>}
+                    {k.sub && <div style={{ fontSize: 11, marginTop: 3, color: '#94A3B8' }}>{k.sub}</div>}
+                  </div>
+                ))}
+              </div>
+
+              {/* Chart */}
+              <div style={{ background: '#fff', borderRadius: 12, border: '1px solid #E2E8F0', padding: 14, marginBottom: 12 }}>
+                <div style={{ fontSize: 13, fontWeight: 600, color: '#1E293B', marginBottom: 12 }}>Retrasos por día</div>
+                <div style={{ display: 'flex', gap: 6, alignItems: 'flex-end', height: 80 }}>
+                  {d.days.map((c, i) => (
+                    <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, flex: 1 }}>
+                      <div style={{ flex: 1, display: 'flex', alignItems: 'flex-end', width: '100%' }}>
+                        <div style={{ width: '100%', borderRadius: '3px 3px 0 0', height: Math.max(4, c / maxDay * 70), background: c === 0 ? '#10B981' : c === 1 ? '#F59E0B' : '#EF4444', transition: 'height .5s' }} />
+                      </div>
+                      <div style={{ fontSize: 10, fontWeight: 700, color: '#1E293B' }}>{c}</div>
+                      <div style={{ fontSize: 10, color: '#94A3B8' }}>{['Lun', 'Mar', 'Mié', 'Jue', 'Vie'][i]}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Top actividades */}
+              <div style={{ background: '#fff', borderRadius: 12, border: '1px solid #E2E8F0', padding: 14, marginBottom: 12 }}>
+                <div style={{ fontSize: 13, fontWeight: 600, color: '#1E293B', marginBottom: 10 }}>Actividades con más retrasos</div>
+                {d.top.map((t, i) => (
+                  <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 0', borderBottom: i < d.top.length - 1 ? '1px solid #F8FAFC' : 'none', fontSize: 12 }}>
+                    <span style={{ color: '#334155', flex: 1, marginRight: 8 }}>{t.n}</span>
+                    <div style={{ flex: 1, height: 4, background: '#F1F5F9', borderRadius: 99, marginRight: 8 }}>
+                      <div style={{ width: `${t.c / 4 * 100}%`, height: '100%', borderRadius: 99, background: t.cl === 'red' ? '#EF4444' : t.cl === 'yellow' ? '#F59E0B' : '#10B981' }} />
+                    </div>
+                    <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 99, background: t.cl === 'red' ? '#FEE2E2' : t.cl === 'yellow' ? '#FEF3C7' : '#DCFCE7', color: t.cl === 'red' ? '#991B1B' : t.cl === 'yellow' ? '#92400E' : '#166534', whiteSpace: 'nowrap' }}>{t.c} retraso{t.c !== 1 ? 's' : ''}</span>
+                  </div>
+                ))}
+              </div>
+
+              {/* SLA por área */}
+              <div style={{ background: '#fff', borderRadius: 12, border: '1px solid #E2E8F0', padding: 14 }}>
+                <div style={{ fontSize: 13, fontWeight: 600, color: '#1E293B', marginBottom: 10 }}>Cumplimiento por área</div>
+                {d.sla.map((s2, i) => (
+                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                    <span style={{ fontSize: 12, color: '#334155', width: 110, flexShrink: 0 }}>{s2.a}</span>
+                    <div style={{ flex: 1, height: 5, background: '#F1F5F9', borderRadius: 99 }}>
+                      <div style={{ width: `${s2.p}%`, height: '100%', borderRadius: 99, background: s2.p >= 90 ? '#10B981' : s2.p >= 75 ? '#F59E0B' : '#EF4444' }} />
+                    </div>
+                    <span style={{ fontSize: 12, fontWeight: 700, width: 36, textAlign: 'right', color: s2.p >= 90 ? '#10B981' : s2.p >= 75 ? '#F59E0B' : '#EF4444' }}>{s2.p}%</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        })()}
       </div>
     </div>
   );
