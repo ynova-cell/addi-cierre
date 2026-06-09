@@ -414,7 +414,6 @@ export default function App() {
             const text = diff === 0 ? `Sin cambio` : `${label}${dir} de ${prev}${unit} a ${curr}${unit}`;
             return { color, text, better };
           };
-          };
           const T = {
             sla: trend(d.sla, d.slaP, true, '%', 'SLA '),
             ret: trend(d.ret, d.retP, false, '', 'Retrasos '),
