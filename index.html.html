@@ -1,0 +1,898 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Control Reportes SFC</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #EEF4FB;
+  --bg2: #ffffff;
+  --bg3: #c8ddf0;
+  --border: rgba(0,0,0,0.1);
+  --border2: rgba(0,0,0,0.18);
+  --text: #1a1916;
+  --text2: #6b6860;
+  --text3: #9e9c97;
+  --amber50: #FDF5E8;
+  --amber100: #FAC775;
+  --amber400: #EF9F27;
+  --amber600: #BA7517;
+  --amber800: #633806;
+  --blue50: #E6F1FB;
+  --blue200: #85B7EB;
+  --blue400: #378ADD;
+  --blue600: #185FA5;
+  --blue800: #0C447C;
+  --green50: #EAF3DE;
+  --green200: #97C459;
+  --green600: #3B6D11;
+  --green800: #27500A;
+  --purple50: #EEEDFE;
+  --purple600: #534AB7;
+  --purple800: #3C3489;
+  --red50: #FCEBEB;
+  --red200: #F09595;
+  --red600: #A32D2D;
+  --red800: #791F1F;
+  --gray50: #F1EFE8;
+  --gray400: #888780;
+  --gray600: #5F5E5A;
+  --radius: 8px;
+  --radius-lg: 12px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'IBM Plex Sans', sans-serif; background: var(--bg); color: var(--text); font-size: 13px; min-height: 100vh; }
+.page { max-width: 1400px; margin: 0 auto; padding: 24px 20px; }
+
+.header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; flex-wrap: wrap; gap: 12px; }
+.header-left h1 { font-size: 18px; font-weight: 600; color: var(--text); letter-spacing: -.01em; }
+.header-left p { font-size: 11px; color: var(--text2); margin-top: 2px; }
+.header-right { display: flex; gap: 8px; align-items: center; }
+.saved-badge { font-size: 10px; color: var(--green600); background: var(--green50); border: 1px solid var(--green200); border-radius: 20px; padding: 3px 10px; opacity: 0; transition: opacity .3s; }
+.saved-badge.show { opacity: 1; }
+
+.stats { margin-bottom: 14px; }
+.stats-bar { display: flex; gap: 16px; padding: 12px 16px; background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius-lg); align-items: center; }
+.stats-states { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 24px; flex: 1; }
+.stat-chip { display: flex; align-items: center; gap: 7px; white-space: nowrap; }
+.stat-chip .sc-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.stat-chip .sc-n { font-size: 11px; font-weight: 500; min-width: 14px; }
+.stat-chip .sc-l { font-size: 11px; text-transform: uppercase; letter-spacing: .03em; color: var(--text2); }
+.stats-divider { width: 1px; align-self: stretch; background: var(--border); flex-shrink: 0; }
+.stats-right { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.stat-rchip { display: flex; align-items: center; justify-content: center; gap: 7px; padding: 8px 12px; border-radius: var(--radius); border: 1px solid var(--border); white-space: nowrap; width: 130px; cursor: default; }
+.stat-rchip .sc-n { font-size: 11px; font-weight: 500; }
+.stat-rchip .sc-l { font-size: 11px; text-transform: uppercase; letter-spacing: .03em; color: var(--text2); }
+.stat-rchip.sr-total { border-color: var(--border2); background: var(--bg3); }
+.stat-rchip.sr-err { border-color: var(--red200); background: var(--red50); }
+.stat-rchip.sr-err .sc-n, .stat-rchip.sr-err .sc-l, .stat-rchip.sr-err i { color: var(--red800); }
+.stat-rchip.sr-rez { border-color: var(--red200); background: var(--red50); cursor: pointer; }
+.stat-rchip.sr-rez .sc-n, .stat-rchip.sr-rez .sc-l, .stat-rchip.sr-rez i { color: var(--red800); }
+.stat-rchip.sr-act { border-color: var(--amber100); background: var(--amber50); cursor: pointer; }
+.stat-rchip.sr-act .sc-n, .stat-rchip.sr-act .sc-l, .stat-rchip.sr-act i { color: var(--amber600); }
+.stat-rchip.sr-rez:hover, .stat-rchip.sr-act:hover { opacity: .85; }
+
+
+
+
+
+.toolbar { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 12px; }
+.week-nav { display: flex; align-items: center; gap: 6px; }
+.week-nav button { font-family: inherit; width: 28px; height: 28px; border-radius: var(--radius); border: 1px solid var(--border2); background: var(--bg2); color: var(--text); cursor: pointer; font-size: 14px; display: flex; align-items: center; justify-content: center; }
+.week-nav button:hover { background: var(--bg3); }
+.week-label { font-size: 13px; font-weight: 500; min-width: 200px; text-align: center; }
+.btn { font-family: inherit; font-size: 12px; padding: 6px 12px; border-radius: var(--radius); border: 1px solid var(--border2); background: var(--bg2); color: var(--text); cursor: pointer; transition: background .15s; }
+.btn:hover { background: var(--bg3); }
+.filters { display: flex; gap: 4px; flex-wrap: wrap; margin-left: auto; }
+.filter-btn { font-family: inherit; font-size: 11px; padding: 4px 10px; border-radius: 20px; border: 1px solid var(--border); background: var(--bg2); color: var(--text2); cursor: pointer; transition: all .15s; }
+.filter-btn:hover { border-color: var(--border2); color: var(--text); }
+.filter-btn.active { background: var(--text); color: var(--bg2); border-color: var(--text); }
+
+.legend { display: flex; gap: 14px; flex-wrap: wrap; margin-bottom: 12px; align-items: center; }
+.leg { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--text2); }
+.leg-dot { width: 14px; height: 14px; border-radius: 50%; flex-shrink: 0; }
+
+/* ── TABLE ── */
+.table-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--border); }
+.tbl { width: 100%; border-collapse: separate; border-spacing: 1px; }
+
+/* sticky header */
+.tbl th { background: var(--bg3); padding: 8px 8px; font-size: 10px; font-weight: 500; color: var(--text2); text-transform: uppercase; letter-spacing: .04em; white-space: nowrap; position: sticky; top: 0; z-index: 2; }
+.tbl th.col-fmt  { width: 68px; text-align: left; padding-left: 10px; }
+.tbl th.col-name { width: 170px; text-align: left; }
+.tbl th.col-per  { width: 90px; text-align: left; }
+.tbl th.col-day  { text-align: center; min-width: 72px; }
+
+.freq-pill { display:inline-block; font-size:10px; padding:2px 7px; border-radius:20px; font-weight:500; }
+.fp-diario     { background:#E6F1FB; color:#185FA5; }
+.fp-semanal    { background:#EAF3DE; color:#3B6D11; }
+.fp-bisemanal  { background:#EEEDFE; color:#534AB7; }
+.fp-mensual    { background:#FAEEDA; color:#854F0B; }
+.fp-trimestral { background:#FAECE7; color:#993C1D; }
+
+/* Today: subtle blue left border on header only */
+.tbl th.today-head { border-bottom: 3px solid var(--blue400); }
+
+/* Event: banderita + fondo muy suave SOLO en el th */
+.tbl th.event-head { background: var(--amber50); }
+
+/* body cells — event-col only affects the data column, NOT fmt/name */
+.tbl td { background: var(--bg2); padding: 5px 6px; }
+.tbl td.fmt-cell  { font-weight: 600; font-size: 12px; font-family: 'IBM Plex Mono', monospace; color: var(--text); padding-left: 10px; background: var(--bg2) !important; }
+.tbl td.name-cell { font-size: 11px; color: var(--text2); line-height: 1.3; background: var(--bg2) !important; }
+.tbl td.event-col { background: var(--amber50); }
+.tbl td.today-col { border-bottom: 2px solid var(--blue200); }
+.na-cell { color: var(--border2); font-size: 16px; text-align: center; }
+
+.day-head-inner { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.day-name { font-size: 10px; }
+.day-num  { font-size: 14px; font-weight: 600; color: var(--text); font-family: 'IBM Plex Mono', monospace; }
+.event-flag { display: inline-flex; align-items: center; justify-content: center; }
+.event-flag svg { width: 11px; height: 11px; }
+
+/* status buttons */
+.status-btn { display: inline-flex; align-items: center; justify-content: center; border: none; cursor: pointer; border-radius: 4px; font-size: 10px; font-weight: 500; padding: 2px 6px; margin: auto; transition: opacity .1s; white-space: nowrap; font-family: inherit; }
+.status-btn:hover { opacity: .8; }
+.s-pending    { background: var(--gray50);   color: var(--gray600);   border: 1px solid #B4B2A9; }
+.s-generated  { background: var(--blue50);   color: var(--blue800);   border: 1px solid var(--blue200); }
+.s-validated  { background: var(--green50);  color: var(--green800);  border: 1px solid var(--green200); }
+.s-functional { background: var(--purple50); color: var(--purple800); border: 1px solid #AFA9EC; }
+.s-certified  { background: #E1F5EE;         color: #085041;          border: 1px solid #9FE1CB; }
+.s-transmitted{ background: #E8F0FE;         color: #1A40A0;          border: 1px solid #9BAEED; }
+.s-error      { background: var(--red50);    color: var(--red800);    border: 1px solid var(--red200); }
+.corte-marker { position: relative; display: inline-block; }
+.corte-dot { position: absolute; top: -2px; right: -2px; width: 5px; height: 5px; border-radius: 50%; background: #E24B4A; pointer-events: none; }
+
+/* tooltip */
+.tooltip { position: fixed; z-index: 999; background: var(--bg2); border: 1px solid var(--border2); border-radius: var(--radius); padding: 8px 12px; font-size: 12px; color: var(--text); pointer-events: none; display: none; max-width: 240px; line-height: 1.5; }
+.tooltip strong { display: block; margin-bottom: 2px; }
+.tooltip em { font-size: 10px; color: var(--text3); font-style: normal; }
+
+
+/* error panel popup */
+.error-panel { position: fixed; z-index: 1000; background: var(--bg2); border: 1px solid var(--red200); border-top: 3px solid var(--red600); border-radius: var(--radius-lg); padding: 14px 16px; width: 300px; box-shadow: 0 8px 24px rgba(0,0,0,.12); display: none; }
+.error-panel h3 { font-size: 12px; font-weight: 600; color: var(--red800); margin-bottom: 2px; }
+.error-panel .ep-meta { font-size: 11px; color: var(--text2); margin-bottom: 10px; }
+.error-panel label { font-size: 11px; color: var(--text2); display: block; margin-bottom: 4px; margin-top: 8px; }
+.error-panel input, .error-panel textarea { font-family: inherit; font-size: 12px; width: 100%; padding: 6px 8px; border-radius: var(--radius); border: 1px solid var(--border2); background: var(--bg2); color: var(--text); resize: vertical; }
+.error-panel textarea { min-height: 60px; }
+.error-panel input:focus, .error-panel textarea:focus { outline: 2px solid var(--red200); outline-offset: -1px; }
+.error-panel .ep-actions { display: flex; gap: 6px; margin-top: 12px; justify-content: flex-end; }
+.error-panel .ep-actions button { font-family: inherit; font-size: 12px; padding: 5px 12px; border-radius: var(--radius); border: 1px solid var(--border2); background: var(--bg2); color: var(--text); cursor: pointer; }
+.error-panel .ep-actions button.ep-save { background: var(--red600); color: #fff; border-color: var(--red600); }
+.error-panel .ep-actions button:hover { opacity: .85; }
+.ep-close { position: absolute; top: 8px; right: 10px; background: none; border: none; font-size: 16px; color: var(--text3); cursor: pointer; line-height: 1; }
+.ep-close:hover { color: var(--text); }
+/* error note badge on cell */
+.error-note-dot { position: absolute; bottom: 1px; left: 1px; width: 7px; height: 7px; border-radius: 50%; background: var(--red600); border: 1.5px solid var(--bg2); cursor: pointer; }
+/* error hover tooltip — richer */
+.tooltip.error-tip { border-color: var(--red200); border-top: 3px solid var(--red600); pointer-events: none; max-width: 280px; }
+.tooltip .tip-error-tag { display: inline-block; font-size: 10px; background: var(--red50); color: var(--red600); border-radius: 4px; padding: 1px 6px; margin-bottom: 4px; }
+.tooltip .tip-field { font-size: 11px; color: var(--text2); margin-top: 4px; }
+.tooltip .tip-field span { color: var(--text); font-weight: 500; }
+
+.err-log-section { margin-top: 28px; }
+.err-log-header { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; flex-wrap: wrap; }
+.err-log-header h2 { font-size: 13px; font-weight: 600; color: var(--text); }
+.err-log-header span { font-size: 11px; color: var(--text2); }
+.err-log-filters { display: flex; gap: 4px; flex-wrap: wrap; margin-left: auto; }
+.err-log-filters button { font-family: inherit; font-size: 11px; padding: 3px 9px; border-radius: 20px; border: 1px solid var(--border); background: var(--bg2); color: var(--text2); cursor: pointer; }
+.err-log-filters button.active { background: var(--red50); color: var(--red600); border-color: var(--red200); }
+.err-log-table { width: 100%; border-collapse: separate; border-spacing: 0; border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; }
+.err-log-table th { background: var(--bg3); padding: 8px 12px; font-size: 10px; font-weight: 500; color: var(--text2); text-transform: uppercase; letter-spacing: .04em; text-align: left; border-bottom: 1px solid var(--border); }
+.err-log-table td { padding: 9px 12px; font-size: 12px; color: var(--text); border-bottom: 1px solid var(--border); vertical-align: top; background: var(--bg2); }
+.err-log-table tr:last-child td { border-bottom: none; }
+.err-log-table tr:hover td { background: var(--red50); }
+.err-badge { display: inline-flex; align-items: center; gap: 4px; font-size: 10px; font-weight: 500; background: var(--red50); color: var(--red600); border: 1px solid var(--red200); border-radius: 4px; padding: 2px 7px; }
+.err-resolved { background: var(--green50); color: var(--green600); border-color: var(--green200); }
+.err-log-table td.td-fmt { font-family: 'IBM Plex Mono', monospace; font-weight: 600; font-size: 12px; white-space: nowrap; }
+.err-log-table td.td-date { white-space: nowrap; color: var(--text2); font-size: 11px; }
+.err-log-table td.td-note { color: var(--text2); }
+.err-log-table td.td-note span { color: var(--text); }
+.err-log-table td.td-actions { width: 90px; white-space: nowrap; }
+.err-log-table td.td-actions button { font-family: inherit; font-size: 11px; padding: 3px 8px; border-radius: var(--radius); border: 1px solid var(--border2); background: var(--bg2); color: var(--text2); cursor: pointer; }
+.err-log-table td.td-actions button:hover { background: var(--bg3); }
+.err-empty { font-size: 12px; color: var(--text2); padding: 16px 0; }
+
+/* events section */
+.events-section { margin-top: 24px; }
+.events-header { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+.events-header h2 { font-size: 13px; font-weight: 600; }
+.events-header span { font-size: 11px; color: var(--text2); }
+.event-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 8px; }
+.event-card { background: var(--bg2); border: 1px solid var(--border); border-left: 3px solid var(--border2); border-radius: var(--radius); padding: 10px 12px; display: flex; gap: 10px; align-items: flex-start; }
+.event-card.this-week { border-left-color: var(--amber400); background: var(--amber50); }
+.event-date-badge { background: var(--bg3); border: 1px solid var(--border); border-radius: var(--radius); padding: 4px 8px; text-align: center; min-width: 46px; flex-shrink: 0; }
+.event-card.this-week .event-date-badge { background: var(--amber50); border-color: var(--amber100); }
+.event-card.this-week .event-date-badge .ed-day { color: var(--amber800); }
+.event-card.this-week .event-date-badge .ed-mon { color: var(--amber600); }
+.ed-day { font-size: 16px; font-weight: 600; font-family: 'IBM Plex Mono', monospace; color: var(--text2); line-height: 1; }
+.ed-mon { font-size: 9px; color: var(--text3); text-transform: uppercase; letter-spacing: .04em; margin-top: 1px; }
+.event-body { flex: 1; }
+.event-text { font-size: 12px; color: var(--text); line-height: 1.4; }
+.event-year { font-size: 10px; color: var(--text3); margin-top: 2px; }
+.event-del { background: none; border: none; cursor: pointer; color: var(--text3); font-size: 16px; padding: 0; line-height: 1; flex-shrink: 0; }
+.event-del:hover { color: var(--red600); }
+.add-form { margin-top: 12px; display: flex; gap: 8px; flex-wrap: wrap; }
+.add-form input { font-family: inherit; font-size: 12px; padding: 7px 10px; border-radius: var(--radius); border: 1px solid var(--border2); background: var(--bg2); color: var(--text); }
+.add-form input[type=date] { width: 140px; }
+.add-form input[type=text] { flex: 1; min-width: 200px; }
+.add-form input:focus { outline: 2px solid var(--amber400); outline-offset: -1px; }
+.add-form button { font-family: inherit; font-size: 12px; padding: 7px 14px; border-radius: var(--radius); border: 1px solid var(--border2); background: var(--bg2); color: var(--text); cursor: pointer; }
+.add-form button:hover { background: var(--bg3); }
+
+/* status summary section */
+.status-summary { margin-top: 32px; padding-bottom: 40px; }
+.status-summary-header { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
+.status-summary-header h2 { font-size: 13px; font-weight: 600; color: var(--text); }
+.status-summary-header span { font-size: 11px; color: var(--text2); }
+.ss-week-label { font-size: 11px; font-weight: 500; background: var(--bg3); border-radius: 20px; padding: 3px 10px; color: var(--text2); }
+.ss-cols { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; }
+.ss-col { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; }
+.ss-col-head { display: flex; align-items: center; gap: 8px; padding: 9px 14px; border-bottom: 1px solid var(--border); }
+.ss-col-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.ss-col-label { font-size: 11px; font-weight: 600; flex: 1; }
+.ss-col-count { font-size: 11px; font-weight: 600; font-family: 'IBM Plex Mono', monospace; color: var(--text2); }
+.ss-list { padding: 6px 0; }
+.ss-item { display: flex; align-items: flex-start; gap: 8px; padding: 6px 14px; border-bottom: 1px solid var(--border); }
+.ss-item:last-child { border-bottom: none; }
+.ss-item-id { font-family: 'IBM Plex Mono', monospace; font-size: 11px; font-weight: 600; color: var(--text); min-width: 36px; }
+.ss-item-info { flex: 1; }
+.ss-item-name { font-size: 11px; color: var(--text2); line-height: 1.3; }
+.ss-item-date { font-size: 10px; color: var(--text3); margin-top: 1px; }
+.ss-empty { padding: 10px 14px; font-size: 11px; color: var(--text3); font-style: italic; }
+
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="header">
+    <div class="header-left">
+      <h1>Control de Reportes Regulatorios — SFC</h1>
+      <p>Área de Reportes Regulatorios · Desde abril 6, 2026</p>
+    </div>
+    <div class="header-right">
+      <span class="saved-badge" id="saved-badge">Guardado ✓</span>
+    </div>
+  </div>
+
+  <div class="stats"><div class="stats-bar" id="stats"></div></div>
+
+  <div class="toolbar">
+    <div class="week-nav">
+      <button onclick="changeWeek(-1)" title="Semana anterior">&#8249;</button>
+      <span class="week-label" id="week-label"></span>
+      <button onclick="changeWeek(1)" title="Semana siguiente">&#8250;</button>
+    </div>
+    <button class="btn" onclick="goToday()">Hoy</button>
+    <div class="filters" id="filter-bar"></div>
+  </div>
+
+
+  <div class="table-wrap">
+    <table class="tbl">
+      <thead id="tbl-head"></thead>
+      <tbody id="tbl-body"></tbody>
+    </table>
+  </div>
+
+  <div class="tooltip" id="tooltip"></div>
+
+  <div class="events-section" id="events-section">
+    <div class="events-header">
+      <h2>Actividades importantes</h2>
+      <span id="events-count"></span>
+    </div>
+    <div class="event-grid" id="event-grid"></div>
+    <div class="add-form">
+      <input type="date" id="ev-date" />
+      <input type="text" id="ev-text" placeholder="Descripción de la actividad..." />
+      <button onclick="addEvent()">+ Agregar</button>
+    </div>
+  </div>
+
+  <div class="err-log-section" id="err-log-section">
+    <div class="err-log-header">
+      <h2>Historial de errores</h2>
+      <span id="err-log-count"></span>
+      <div class="err-log-filters">
+        <button id="elf-all"    class="active" onclick="setErrFilter('all')">Todos</button>
+        <button id="elf-active" onclick="setErrFilter('active')">Activos</button>
+        <button id="elf-resolved" onclick="setErrFilter('resolved')">Resueltos</button>
+      </div>
+    </div>
+    <div id="err-log-body"></div>
+  </div>
+
+  <div class="status-summary" id="status-summary">
+    <div class="status-summary-header">
+      <h2>Resumen de estado por formato</h2>
+      <span id="ss-week-label" class="ss-week-label"></span>
+      <span id="ss-subtitle" style="font-size:11px;color:var(--text2);"></span>
+    </div>
+    <div class="ss-cols" id="ss-cols"></div>
+  </div>
+
+  <!-- Error detail panel -->
+  <div class="error-panel" id="error-panel">
+    <button class="ep-close" onclick="closeErrorPanel()">×</button>
+    <h3 id="ep-title">Error en formato</h3>
+    <div class="ep-meta" id="ep-meta"></div>
+    <label>¿Qué falló?</label>
+    <input type="text" id="ep-what" placeholder="Ej: Archivo no generado, datos incorrectos..." />
+    <label>¿Dónde está el error?</label>
+    <textarea id="ep-where" placeholder="Ej: Celda B12, módulo de cálculo, conexión BD..."></textarea>
+    <div class="ep-actions">
+      <button onclick="closeErrorPanel()">Cancelar</button>
+      <button class="ep-save" onclick="saveErrorNote()">Guardar nota</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const FREQ_ORDER = {diario:0, semanal:1, bisemanal:2, mensual:3, trimestral:4};
+const FREQ_LABEL = {diario:'Diario', semanal:'Semanal', bisemanal:'Bisemanal', mensual:'Mensual', trimestral:'Trimestral'};
+
+const FORMATS = [
+  {id:'351',  name:'Portafolio de Inversiones',       freq:'diario'},
+  {id:'386',  name:'Valor en Riesgo',                 freq:'diario'},
+  {id:'281',  name:'Cuentas Activas y Pasivas',       freq:'semanal'},
+  {id:'458S', name:'Flujos de Caja Semanal',          freq:'semanal'},
+  {id:'443',  name:'Encaje',                          freq:'bisemanal'},
+  {id:'238',  name:'CFEN',                            freq:'mensual'},
+  {id:'239',  name:'Margen de Solvencia',             freq:'mensual'},
+  {id:'409',  name:'Sectorización Activo/Pasivo',     freq:'mensual'},
+  {id:'427',  name:'Grandes Exposiciones Límites',    freq:'mensual'},
+  {id:'428',  name:'Grandes Exposiciones',            freq:'mensual'},
+  {id:'429',  name:'Garantías Idóneas',               freq:'mensual'},
+  {id:'433',  name:'Grupos Conectados',               freq:'mensual'},
+  {id:'458M', name:'Flujos de Caja Mensual',          freq:'mensual'},
+  {id:'00',   name:'Estados Financieros Mensuales',   freq:'mensual'},
+  {id:'211',  name:'Acciones y Accionistas',          freq:'trimestral'},
+  {id:'529',  name:'Accionistas 2do/3er Nivel',       freq:'trimestral'},
+  {id:'PDF',  name:'EEFF y Notas PDF',                freq:'trimestral'},
+  {id:'XBRL', name:'XBRL',                            freq:'trimestral'},
+];
+
+const STATUSES   = ['pending','generated','validated','functional','certified','transmitted','error'];
+const S_LABEL    = {pending:'Pendiente',generated:'Generado',validated:'Validado interno',functional:'Validado funcional',certified:'Certificado',transmitted:'Transmitido',error:'Error'};
+const S_CLASS    = {pending:'s-pending',generated:'s-generated',validated:'s-validated',functional:'s-functional',certified:'s-certified',transmitted:'s-transmitted',error:'s-error'};
+const S_ICON     = {pending:'Pend',generated:'Gen',validated:'Val.I',functional:'Val.F',certified:'Cert',transmitted:'Trans',error:'Error'};
+const MON_SHORT  = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+const MON_LONG   = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+const DAY_SHORT  = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
+const TRI_CORTES = ['03-31','06-30','09-30','12-31'];
+const SK_STATE   = 'sfc_state_v3';
+const SK_EVENTS  = 'sfc_events_v3';
+
+let appState = {}, events = [];
+let errorLog = [];
+let errFilter = 'all';
+let weekStart = getWeekStart(new Date());
+let activeFilter = 'all';
+
+function loadStorage() {
+  try { const s = localStorage.getItem(SK_STATE);  if (s) appState = JSON.parse(s); } catch(_){}
+  try {
+    const e = localStorage.getItem(SK_EVENTS);
+    events = e ? JSON.parse(e) : [{date:'2026-05-15', text:'Inclusión de 1,000 USD en cuenta JP Morgan'}];
+  } catch(_) { events = [{date:'2026-05-15', text:'Inclusión de 1,000 USD en cuenta JP Morgan'}]; }
+}
+
+function saveStorage() {
+  try {
+    localStorage.setItem(SK_STATE,  JSON.stringify(appState));
+    localStorage.setItem(SK_EVENTS, JSON.stringify(events));
+    const b = document.getElementById('saved-badge');
+    b.classList.add('show');
+    clearTimeout(b._t);
+    b._t = setTimeout(() => b.classList.remove('show'), 2000);
+  } catch(_){}
+}
+
+function getWeekStart(d) {
+  const r = new Date(d); r.setHours(0,0,0,0);
+  const dw = r.getDay();
+  r.setDate(r.getDate() + (dw === 0 ? -6 : 1 - dw));
+  return r;
+}
+function addDays(d,n){ const r=new Date(d); r.setDate(r.getDate()+n); return r; }
+function fmtDate(d){ return d.toISOString().slice(0,10); }
+const START_DATE = new Date('2026-04-07T00:00:00');
+function changeWeek(n){
+  const next = addDays(weekStart, n*7);
+  if (n < 0 && next < getWeekStart(START_DATE)) return; // block before Apr 7
+  weekStart = next;
+  render();
+}
+function goToday(){ weekStart = getWeekStart(new Date()); render(); }
+
+function isCorte(fmt, d) {
+  const dw = d.getDay();
+  const isWD = dw !== 0 && dw !== 6;
+  const isEOM = d.getDate() === new Date(d.getFullYear(), d.getMonth()+1, 0).getDate();
+  const md = String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+  if (fmt.freq==='diario')     return isWD;
+  if (fmt.freq==='semanal')    return dw===5;
+  if (fmt.freq==='bisemanal')  return dw===5;
+  if (fmt.freq==='mensual')    return isEOM;
+  if (fmt.freq==='trimestral') return TRI_CORTES.includes(md);
+  return false;
+}
+
+function getStatus(fid, ds){ return appState[fid+'__'+ds] || 'pending'; }
+function cycleStatus(fid, ds){
+  const cur = getStatus(fid, ds);
+  const next = STATUSES[(STATUSES.indexOf(cur)+1) % STATUSES.length];
+  appState[fid+'__'+ds] = next;
+  saveStorage(); render(); renderRezago();
+  if (next === 'error') {
+    const fmt = FORMATS.find(f => f.id === fid);
+    openErrorPanel(fid, ds, fmt ? fmt.name : fid);
+  }
+}
+
+const FLAG_SVG = `<span class="event-flag"><svg viewBox="0 0 24 24" fill="none" stroke="#BA7517" stroke-width="2.5"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg></span>`;
+
+function render() {
+  const days  = Array.from({length:7}, (_,i) => addDays(weekStart, i));
+  const today = fmtDate(new Date());
+  const evSet = new Set(events.map(e => e.date));
+
+  // block back btn at start
+  const backBtn = document.querySelector('.week-nav button:first-child');
+  if (backBtn) {
+    const atStart = weekStart <= getWeekStart(START_DATE);
+    backBtn.disabled = atStart;
+    backBtn.style.opacity = atStart ? '0.3' : '1';
+    backBtn.style.cursor  = atStart ? 'not-allowed' : 'pointer';
+  }
+  // week label
+  const d0=days[0], d6=days[6];
+  document.getElementById('week-label').textContent =
+    d0.getDate()+' '+MON_SHORT[d0.getMonth()]+' – '+d6.getDate()+' '+MON_SHORT[d6.getMonth()]+' '+d6.getFullYear();
+
+  // thead — event-head ONLY on th, no event-col on fmt/name columns
+  let th = '<tr><th class="col-fmt">Formato</th><th class="col-name">Nombre</th><th class="col-per">Periodicidad</th>';
+  days.forEach(d => {
+    const ds = fmtDate(d);
+    const isToday = ds === today;
+    const hasEv   = evSet.has(ds);
+    const cls = (isToday ? ' today-head' : '') + (hasEv ? ' event-head' : '');
+    th += `<th class="col-day${cls}"><div class="day-head-inner">
+      <span class="day-name">${DAY_SHORT[d.getDay()]}</span>
+      <span class="day-num">${d.getDate()}</span>
+      ${hasEv ? FLAG_SVG : ''}
+    </div></th>`;
+  });
+  th += '</tr>';
+  document.getElementById('tbl-head').innerHTML = th;
+
+  // tbody
+  const fmts = activeFilter==='all' ? FORMATS : FORMATS.filter(f => f.freq===activeFilter);
+  let rows = '';
+  fmts.forEach(fmt => {
+    rows += '<tr>';
+    rows += `<td class="fmt-cell">${fmt.id}</td>`;
+    rows += `<td class="name-cell">${fmt.name}</td>`;
+    rows += `<td class="name-cell"><span class="freq-pill fp-${fmt.freq}">${FREQ_LABEL[fmt.freq]}</span></td>`;
+    days.forEach(d => {
+      const ds      = fmtDate(d);
+      const isToday = ds === today;
+      const hasEv   = evSet.has(ds);
+      const tdCls   = (isToday ? ' today-col' : '') + (hasEv ? ' event-col' : '');
+      if (isCorte(fmt, d)) {
+        const st  = getStatus(fmt.id, ds);
+        const errKey = fmt.id+'__'+ds+'__err';
+        const hasErrNote = appState[errKey] && (appState[errKey].what || appState[errKey].where);
+        const tip = `${fmt.id} · ${fmt.name}|${DAY_SHORT[d.getDay()]} ${d.getDate()} ${MON_LONG[d.getMonth()]}|${S_LABEL[st]}|Clic para cambiar estado`;
+        const errTip = st==='error' ? `${fmt.id} · ${fmt.name}|${DAY_SHORT[d.getDay()]} ${d.getDate()} ${MON_LONG[d.getMonth()]}|error|${hasErrNote?(appState[errKey].what||'')+'|||'+(appState[errKey].where||''):'Sin nota — clic derecho para añadir detalle'}` : '';
+        const noteBtn = (st==='error') ? `<span class="error-note-dot" title="Ver/editar detalle del error" onclick="event.stopPropagation();openErrorPanel('${fmt.id}','${ds}','${fmt.name}')"></span>` : '';
+        rows += `<td class="${tdCls}" style="text-align:center;">
+          <div class="corte-marker">
+            <button class="status-btn ${S_CLASS[st]}"
+              onclick="cycleStatus('${fmt.id}','${ds}')"
+              onmouseenter="showTip(event,'${st==='error'?errTip:tip}','${st==='error'?'error':''}')"
+              onmouseleave="hideTip()"
+              title="${S_LABEL[st]}">${S_ICON[st]}</button>
+            <span class="corte-dot"></span>
+            ${noteBtn}
+          </div></td>`;
+      } else {
+        rows += `<td class="${tdCls} na-cell">·</td>`;
+      }
+    });
+    rows += '</tr>';
+  });
+  document.getElementById('tbl-body').innerHTML = rows;
+
+  renderStats(days);
+  renderFilters();
+  renderEvents(days);
+  renderStatusSummary();
+}
+
+function renderStats(days) {
+  const c = {pending:0,generated:0,validated:0,functional:0,certified:0,transmitted:0,error:0};
+  days.forEach(d => FORMATS.forEach(fmt => { if(isCorte(fmt,d)) c[getStatus(fmt.id,fmtDate(d))]++; }));
+  const total = Object.values(c).reduce((a,b)=>a+b,0);
+  const evCount = (events||[]).length;
+  const errActive = (errorLog||[]).filter(e=>!e.resolved).length;
+
+  const stateChips = [
+    {key:'generated',  dot:'#378ADD', col:'#0C447C'},
+    {key:'validated',  dot:'#97C459', col:'#27500A'},
+    {key:'functional', dot:'#7F77DD', col:'#3C3489'},
+    {key:'certified',  dot:'#5DCAA5', col:'#085041'},
+    {key:'transmitted',dot:'#4A6FE3', col:'#1A40A0'},
+    {key:'pending',    dot:'#888780', col:'#5F5E5A'},
+  ];
+
+  const leftHtml = stateChips.map(s => `
+    <div class="stat-chip">
+      <span class="sc-dot" style="background:${s.dot};"></span>
+      <span class="sc-n" style="color:${s.col};">${c[s.key]}</span>
+      <span class="sc-l">${S_LABEL[s.key]}</span>
+    </div>`).join('');
+
+  const rightHtml = `
+    <div class="stat-rchip sr-total">
+      <span class="sc-n" style="color:var(--text);">${total}</span>
+      <span class="sc-l">Total semana</span>
+    </div>
+    <div class="stat-rchip sr-err">
+      <span class="sc-dot" style="width:10px;height:10px;border-radius:50%;background:#E24B4A;flex-shrink:0;"></span>
+      <span class="sc-n">${c.error}</span>
+      <span class="sc-l">Errores</span>
+    </div>
+    <div class="stat-rchip sr-rez" onclick="goToErrLog()" title="Ver rezagados">
+      <i class="ti ti-alert-triangle" aria-hidden="true" style="font-size:11px;"></i>
+      <span class="sc-n" id="rez-count">—</span>
+      <span class="sc-l">Rezagados</span>
+    </div>
+    <div class="stat-rchip sr-act" onclick="goToActivity()" title="Ver actividades">
+      <i class="ti ti-flag-2" aria-hidden="true" style="font-size:11px;"></i>
+      <span class="sc-n">${evCount}</span>
+      <span class="sc-l">Actividades</span>
+    </div>`;
+
+  document.getElementById('stats').innerHTML = `
+    <div class="stats-states">${leftHtml}</div>
+    <div class="stats-divider"></div>
+    <div class="stats-right">${rightHtml}</div>`;
+}
+
+function goToErrLog() {
+  document.getElementById('err-log-section').scrollIntoView({behavior:'smooth'});
+}
+
+function goToActivity() {
+  if (!events.length) { document.getElementById('events-section').scrollIntoView({behavior:'smooth'}); return; }
+  const sorted = [...events].sort((a,b) => a.date.localeCompare(b.date));
+  const today = fmtDate(new Date());
+  const target = sorted.find(e => e.date >= today) || sorted[sorted.length-1];
+  weekStart = getWeekStart(new Date(target.date + 'T12:00:00'));
+  render();
+  setTimeout(() => document.getElementById('events-section').scrollIntoView({behavior:'smooth'}), 100);
+}
+
+function renderFilters() {
+  const freqs  = ['all','diario','semanal','bisemanal','mensual','trimestral'];
+  const labels = {all:'Todos',diario:'Diario',semanal:'Semanal',bisemanal:'Bisemanal',mensual:'Mensual',trimestral:'Trimestral'};
+  document.getElementById('filter-bar').innerHTML = freqs.map(f =>
+    `<button class="filter-btn${activeFilter===f?' active':''}" onclick="setFilter('${f}')">${labels[f]}</button>`
+  ).join('');
+}
+function setFilter(f){ activeFilter=f; render(); }
+
+function renderEvents(days) {
+  const ds0 = fmtDate(days[0]), ds6 = fmtDate(days[6]);
+  const sorted = [...events].sort((a,b) => a.date.localeCompare(b.date));
+  document.getElementById('events-count').textContent =
+    sorted.length ? sorted.length + ' actividad' + (sorted.length>1?'es':'') + ' registradas' : '';
+  if (!sorted.length) {
+    document.getElementById('event-grid').innerHTML = '<p style="font-size:12px;color:var(--text2);">Sin actividades registradas.</p>';
+    return;
+  }
+  document.getElementById('event-grid').innerHTML = sorted.map((ev,i) => {
+    const d = new Date(ev.date+'T12:00:00');
+    const inWeek = ev.date >= ds0 && ev.date <= ds6;
+    return `<div class="event-card ${inWeek?'this-week':''}">
+      <div class="event-date-badge">
+        <div class="ed-day">${d.getDate()}</div>
+        <div class="ed-mon">${MON_SHORT[d.getMonth()]}</div>
+      </div>
+      <div class="event-body">
+        <div class="event-text">${ev.text}</div>
+        <div class="event-year">${d.getFullYear()}</div>
+      </div>
+      <button class="event-del" onclick="delEvent(${i})" title="Eliminar">×</button>
+    </div>`;
+  }).join('');
+}
+
+function addEvent() {
+  const dt = document.getElementById('ev-date').value;
+  const tx = document.getElementById('ev-text').value.trim();
+  if (!dt || !tx) return;
+  events.push({date:dt, text:tx});
+  events.sort((a,b) => a.date.localeCompare(b.date));
+  document.getElementById('ev-text').value = '';
+  saveStorage(); render();
+}
+function delEvent(i){ events.splice(i,1); saveStorage(); render(); }
+
+function showTip(e, raw, type) {
+  const p = raw.split('|');
+  const t = document.getElementById('tooltip');
+  if (type === 'error') {
+    const what  = p[3] && p[3]!=='Sin nota — clic derecho para añadir detalle' ? p[3].split('|||')[0] : '';
+    const where = p[3] && p[3]!=='Sin nota — clic derecho para añadir detalle' ? p[3].split('|||')[1] : '';
+    const hasNote = what || where;
+    t.className = 'tooltip error-tip';
+    t.innerHTML = `
+      <span class="tip-error-tag">✕ Error</span>
+      <strong>${p[0]}</strong>
+      <div style="font-size:11px;color:var(--text2);margin-bottom:6px;">${p[1]}</div>
+      ${hasNote ? `
+        ${what  ? `<div class="tip-field">¿Qué falló? <span>${what}</span></div>` : ''}
+        ${where ? `<div class="tip-field">¿Dónde? <span>${where}</span></div>` : ''}
+        <div style="font-size:10px;color:var(--text3);margin-top:6px;">Clic en • para editar nota</div>
+      ` : `<div style="font-size:11px;color:var(--text2);">Sin nota de error.<br><em style="font-size:10px;">Clic en • para añadir detalle</em></div>`}`;
+  } else {
+    t.className = 'tooltip';
+    t.innerHTML = `<strong>${p[0]}</strong>${p[1]}<br>Estado: <b>${p[2]}</b><br><em>${p[3]}</em>`;
+  }
+  t.style.display = 'block';
+  t.style.left = (e.clientX+14)+'px';
+  t.style.top  = (e.clientY-8)+'px';
+}
+function hideTip(){ document.getElementById('tooltip').style.display='none'; }
+
+let _errPanel = {fid:null, ds:null};
+function openErrorPanel(fid, ds, name) {
+  _errPanel = {fid, ds};
+  const errKey = fid+'__'+ds+'__err';
+  const note = appState[errKey] || {};
+  const d = new Date(ds+'T12:00:00');
+  document.getElementById('ep-title').textContent = 'Error — Formato '+fid;
+  document.getElementById('ep-meta').textContent = name+' · '+d.getDate()+' '+MON_LONG[d.getMonth()]+' '+d.getFullYear();
+  document.getElementById('ep-what').value  = note.what  || '';
+  document.getElementById('ep-where').value = note.where || '';
+  const panel = document.getElementById('error-panel');
+  panel.style.display = 'block';
+  panel.style.top  = '120px';
+  panel.style.right = '24px';
+  panel.style.left = 'auto';
+  document.getElementById('ep-what').focus();
+}
+function closeErrorPanel() {
+  document.getElementById('error-panel').style.display = 'none';
+}
+function saveErrorNote() {
+  const {fid, ds} = _errPanel;
+  if (!fid) return;
+  const errKey = fid+'__'+ds+'__err';
+  const what  = document.getElementById('ep-what').value.trim();
+  const where = document.getElementById('ep-where').value.trim();
+  appState[errKey] = { what, where };
+  // push to error log (avoid duplicates by fid+ds)
+  const existing = errorLog.findIndex(e => e.fid===fid && e.ds===ds);
+  const fmt = FORMATS.find(f => f.id===fid);
+  const entry = { fid, ds, name: fmt ? fmt.name : fid, what, where, loggedAt: new Date().toISOString(), resolved: existing>=0 ? errorLog[existing].resolved : false };
+  if (existing >= 0) errorLog[existing] = entry;
+  else errorLog.push(entry);
+  saveErrLog();
+  saveStorage();
+  closeErrorPanel();
+  render();
+  renderErrLog();
+}
+
+function toggleResolved(idx) {
+  errorLog[idx].resolved = !errorLog[idx].resolved;
+  saveErrLog();
+  renderErrLog();
+}
+
+function deleteErrEntry(idx) {
+  errorLog.splice(idx, 1);
+  saveErrLog();
+  renderErrLog();
+}
+document.addEventListener('keydown', e => { if(e.key==='Escape') closeErrorPanel(); });
+
+
+const SK_ERRLOG = 'sfc_errlog_v1';
+
+function loadErrLog() {
+  try { const e = localStorage.getItem(SK_ERRLOG); if(e) errorLog = JSON.parse(e); } catch(_){}
+}
+function saveErrLog() {
+  try { localStorage.setItem(SK_ERRLOG, JSON.stringify(errorLog)); } catch(_){}
+}
+function setErrFilter(f) {
+  errFilter = f;
+  ['all','active','resolved'].forEach(k => {
+    const b = document.getElementById('elf-'+k);
+    if(b) b.className = k===f ? 'active' : '';
+  });
+  renderErrLog();
+}
+function renderErrLog() {
+  if (!errorLog) return;
+  const filtered = errFilter==='all' ? errorLog
+    : errFilter==='active'   ? errorLog.filter(e => !e.resolved)
+    : errorLog.filter(e => e.resolved);
+  const filtered2 = filtered||[]; const sorted = [...filtered2].sort((a,b) => b.ds.localeCompare(a.ds) || b.loggedAt.localeCompare(a.loggedAt));
+  const total = errorLog.length;
+  const active = errorLog.filter(e=>!e.resolved).length;
+  document.getElementById('err-log-count').textContent =
+    total ? total+' registro'+(total>1?'s':'')+(active?' · '+active+' activo'+(active>1?'s':''):'') : '';
+
+  const body = document.getElementById('err-log-body');
+  if (!sorted.length) {
+    body.innerHTML = '<p class="err-empty">'+(errorLog.length ? 'Sin registros para este filtro.' : 'Sin errores registrados aún.')+'</p>';
+    return;
+  }
+  let tbl = `<table class="err-log-table">
+    <thead><tr>
+      <th>Formato</th><th>Nombre</th><th>Fecha corte</th>
+      <th>¿Qué falló?</th><th>¿Dónde?</th><th>Estado</th><th>Registrado</th><th></th>
+    </tr></thead><tbody>`;
+  // find real index in errorLog for actions
+  sorted.forEach(entry => {
+    const realIdx = errorLog.indexOf(entry);
+    const d = new Date(entry.ds+'T12:00:00');
+    const logD = new Date(entry.loggedAt);
+    const dateStr = d.getDate()+' '+MON_SHORT[d.getMonth()]+' '+d.getFullYear();
+    const logStr  = logD.getDate()+' '+MON_SHORT[logD.getMonth()]+' '+logD.getFullYear()+' '+String(logD.getHours()).padStart(2,'0')+':'+String(logD.getMinutes()).padStart(2,'0');
+    tbl += `<tr>
+      <td class="td-fmt">${entry.fid}</td>
+      <td>${entry.name}</td>
+      <td class="td-date">${dateStr}</td>
+      <td class="td-note">${entry.what ? `<span>${entry.what}</span>` : '<em style="color:var(--text3)">—</em>'}</td>
+      <td class="td-note">${entry.where ? `<span>${entry.where}</span>` : '<em style="color:var(--text3)">—</em>'}</td>
+      <td><span class="err-badge ${entry.resolved?'err-resolved':''}">${entry.resolved?'✔ Resuelto':'✕ Activo'}</span></td>
+      <td class="td-date">${logStr}</td>
+      <td class="td-actions">
+        <button onclick="toggleResolved(${realIdx})">${entry.resolved?'Reabrir':'Resolver'}</button>
+        <button onclick="deleteErrEntry(${realIdx})" style="margin-left:4px;color:var(--red600)">✕</button>
+      </td>
+    </tr>`;
+  });
+  tbl += '</tbody></table>';
+  body.innerHTML = tbl;
+}
+
+function renderStatusSummary() {
+  const days = Array.from({length:7}, (_,i) => addDays(weekStart, i));
+  const d0 = days[0], d6 = days[6];
+
+  // label
+  document.getElementById('ss-week-label').textContent =
+    'Semana ' + d0.getDate()+' '+MON_SHORT[d0.getMonth()]+' – '+d6.getDate()+' '+MON_SHORT[d6.getMonth()]+' '+d6.getFullYear();
+
+  // collect latest status per format for this week
+  // "latest" = the corte day within the week with the most advanced status
+  const statusOrder = {pending:0,generated:1,validated:2,functional:3,certified:4,error:5};
+  const fmtStatus = {}; // fid -> {status, ds, d}
+
+  FORMATS.forEach(fmt => {
+    days.forEach(d => {
+      if (!isCorte(fmt, d)) return;
+      const ds = fmtDate(d);
+      const st = getStatus(fmt.id, ds);
+      const prev = fmtStatus[fmt.id];
+      // pick the entry with highest status order; tie-break by latest date
+      if (!prev || statusOrder[st] > statusOrder[prev.status] || (statusOrder[st]===statusOrder[prev.status] && ds > prev.ds)) {
+        fmtStatus[fmt.id] = { status: st, ds, d: new Date(ds+'T12:00:00'), name: fmt.name, freq: fmt.freq };
+      }
+    });
+  });
+
+  // group by status
+  const groups = {pending:[],generated:[],validated:[],functional:[],certified:[],transmitted:[],error:[]};
+  Object.entries(fmtStatus).forEach(([fid, info]) => {
+    groups[info.status].push({fid, ...info});
+  });
+
+  // config per status
+  const cfg = [
+    { key:'certified',  label:'Certificado',        dot:'#5DCAA5', headBg:'#E1F5EE', headColor:'#085041' },
+    { key:'functional', label:'Validado funcional',  dot:'#7F77DD', headBg:'var(--purple50)', headColor:'var(--purple800)' },
+    { key:'validated',  label:'Validado interno',    dot:'#639922', headBg:'var(--green50)',  headColor:'var(--green800)' },
+    { key:'generated',  label:'Generado',            dot:'#378ADD', headBg:'var(--blue50)',   headColor:'var(--blue800)' },
+    { key:'transmitted',label:'Transmitido',          dot:'#4A6FE3', headBg:'#E8F0FE',        headColor:'#1A40A0'       },
+    { key:'error',      label:'Error',               dot:'#E24B4A', headBg:'var(--red50)',    headColor:'var(--red800)' },
+    { key:'pending',    label:'Pendiente',            dot:'#888780', headBg:'var(--gray50)',   headColor:'var(--gray600)' },
+  ];
+
+  // only show statuses that have at least one format, but always show all
+  let cols = '';
+  cfg.forEach(c => {
+    const items = (groups[c.key]||[]).sort((a,b) => a.fid.localeCompare(b.fid));
+    const count = items.length;
+    cols += `<div class="ss-col">
+      <div class="ss-col-head" style="background:${c.headBg};">
+        <span class="ss-col-dot" style="background:${c.dot};"></span>
+        <span class="ss-col-label" style="color:${c.headColor};">${c.label}</span>
+        <span class="ss-col-count">${count}</span>
+      </div>
+      <div class="ss-list">`;
+    if (!count) {
+      cols += `<div class="ss-empty">Sin formatos</div>`;
+    } else {
+      items.forEach(it => {
+        const dateStr = it.d.getDate()+' '+MON_SHORT[it.d.getMonth()];
+        const freq = FREQ_LABEL[it.freq] || it.freq;
+        cols += `<div class="ss-item">
+          <span class="ss-item-id">${it.fid}</span>
+          <div class="ss-item-info">
+            <div class="ss-item-name">${it.name}</div>
+            <div class="ss-item-date">${freq} · corte ${dateStr}</div>
+          </div>
+        </div>`;
+      });
+    }
+    cols += '</div></div>';
+  });
+
+  document.getElementById('ss-cols').innerHTML = cols;
+  const total = Object.values(fmtStatus).length;
+  document.getElementById('ss-subtitle').textContent = total ? total + ' formato' + (total>1?'s':'')+' con corte esta semana' : '';
+}
+
+function renderRezago() {
+  if (typeof errorLog === "undefined") return;
+  const today = new Date(); today.setHours(0,0,0,0);
+  const start = new Date('2026-04-07T00:00:00');
+  const todayStr = fmtDate(today);
+
+  // walk every day from start to today, count cortes not certified
+  let total = 0, rezagados = 0;
+  const byFmt = {};
+  const d = new Date(start);
+  while (d <= today) {
+    FORMATS.forEach(fmt => {
+      if (isCorte(fmt, d)) {
+        total++;
+        const st = getStatus(fmt.id, fmtDate(d));
+        if (st !== 'certified' && st !== 'transmitted') {
+          rezagados++;
+          byFmt[fmt.id] = (byFmt[fmt.id]||0) + 1;
+        }
+      }
+    });
+    d.setDate(d.getDate()+1);
+  }
+
+  // top 3 most rezagado formats
+  const top = Object.entries(byFmt).sort((a,b)=>b[1]-a[1]).slice(0,3);
+  const pct = total ? Math.round(rezagados/total*100) : 0;
+
+  // days since start
+  const daysSince = Math.floor((today - start)/(1000*60*60*24));
+
+  const chips = top.map(([fid,cnt]) =>
+    `<span class="rezago-chip hi">${fid}: ${cnt}</span>`
+  ).join('');
+
+  const rezEl = document.getElementById('rez-count');
+  if (rezEl) rezEl.textContent = rezagados;
+}
+
+loadStorage();
+loadErrLog();
+render();
+renderErrLog();
+renderStatusSummary();
+renderRezago();
+</script>
+</body>
+</html>
