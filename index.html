@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Control Reportes SFC</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:#EEF4FB; --bg2:#ffffff; --bg3:#c8ddf0; --border:rgba(0,0,0,0.1); --border2:rgba(0,0,0,0.18);
+  --text:#1a1916; --text2:#6b6860; --text3:#9e9c97;
+  --amber50:#FDF5E8; --amber100:#FAC775; --amber400:#EF9F27; --amber600:#BA7517; --amber800:#633806;
+  --blue50:#E6F1FB; --blue200:#85B7EB; --blue400:#378ADD; --blue600:#185FA5; --blue800:#0C447C;
+  --green50:#EAF3DE; --green200:#97C459; --green600:#3B6D11; --green800:#27500A;
+  --purple50:#EEEDFE; --purple600:#534AB7; --purple800:#3C3489;
+  --red50:#FCEBEB; --red200:#F09595; --red600:#A32D2D; --red800:#791F1F;
+  --gray50:#F1EFE8; --gray400:#888780; --gray600:#5F5E5A;
+  --radius:8px; --radius-lg:12px;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'IBM Plex Sans',sans-serif;background:var(--bg);color:var(--text);font-size:13px;min-height:100vh;}
+.page{max-width:1500px;margin:0 auto;padding:20px;}
+
+/* HEADER */
+.header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px;}
+.header h1{font-size:18px;font-weight:600;}
+.header p{font-size:11px;color:var(--text2);margin-top:2px;}
+.enlivo{display:flex;align-items:center;gap:6px;font-size:11px;margin-top:16px;}
+.enlivo-dot{width:7px;height:7px;border-radius:50%;background:#22C55E;animation:pulse 2s infinite;}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:.4;}}
+.enlivo-text{color:#22C55E;font-weight:500;}
+.enlivo-dt{color:var(--text2);}
+
+/* STATS BAR */
+.stats-bar{display:flex;gap:16px;padding:10px 16px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-lg);align-items:center;margin-bottom:14px;justify-content:space-between;}
+.stats-states{display:grid;grid-template-columns:auto auto;gap:4px 20px;}
+.stat-chip{display:flex;align-items:center;gap:5px;white-space:nowrap;}
+.sc-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
+.sc-n{font-size:11px;font-weight:500;min-width:14px;}
+.sc-l{font-size:11px;text-transform:uppercase;letter-spacing:.03em;color:var(--text2);}
+.stats-divider{width:1px;align-self:stretch;background:var(--border);flex-shrink:0;}
+.stats-right{display:flex;flex-direction:column;gap:6px;}
+.stat-rchip{display:flex;align-items:center;justify-content:center;gap:7px;padding:6px 14px;border-radius:var(--radius);border:1px solid var(--border);white-space:nowrap;min-width:140px;}
+.stat-rchip .sc-n{font-size:11px;font-weight:500;}
+.stat-rchip .sc-l{font-size:11px;text-transform:uppercase;letter-spacing:.03em;color:var(--text2);}
+.stat-rchip.sr-err{border-color:var(--red200);background:var(--red50);}
+.stat-rchip.sr-err .sc-n,.stat-rchip.sr-err .sc-l{color:var(--red800);}
+.stat-rchip.sr-rez{border-color:var(--red200);background:var(--red50);cursor:pointer;}
+.stat-rchip.sr-rez .sc-n,.stat-rchip.sr-rez .sc-l{color:var(--red800);}
+.stat-rchip.sr-act{border-color:var(--amber100);background:var(--amber50);cursor:pointer;}
+.stat-rchip.sr-act .sc-n,.stat-rchip.sr-act .sc-l{color:var(--amber600);}
+.stat-rchip:hover{opacity:.85;}
+.saved-badge{font-size:10px;color:var(--green600);background:var(--green50);border:1px solid var(--green200);border-radius:20px;padding:3px 10px;opacity:0;transition:opacity .3s;}
+.saved-badge.show{opacity:1;}
+
+/* TOOLBAR */
+.toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px;}
+.week-nav{display:flex;align-items:center;gap:6px;}
+.week-nav button{font-family:inherit;width:28px;height:28px;border-radius:var(--radius);border:1px solid var(--border2);background:var(--bg2);color:var(--text);cursor:pointer;font-size:14px;}
+.week-nav button:hover{background:var(--bg3);}
+.week-nav button:disabled{opacity:.3;cursor:not-allowed;}
+.week-label{font-size:13px;font-weight:500;min-width:200px;text-align:center;}
+.btn{font-family:inherit;font-size:12px;padding:6px 12px;border-radius:var(--radius);border:1px solid var(--border2);background:var(--bg2);color:var(--text);cursor:pointer;}
+.btn:hover{background:var(--bg3);}
+.filters{display:flex;gap:4px;flex-wrap:wrap;margin-left:auto;}
+.filter-btn{font-family:inherit;font-size:11px;padding:4px 10px;border-radius:20px;border:1px solid var(--border);background:var(--bg2);color:var(--text2);cursor:pointer;}
+.filter-btn:hover{color:var(--text);}
+.filter-btn.active{background:var(--text);color:var(--bg2);border-color:var(--text);}
+
+/* TABLE */
+.table-wrap{overflow-x:auto;border:1px solid var(--border);border-radius:var(--radius-lg);background:var(--border);}
+.tbl{width:100%;border-collapse:separate;border-spacing:1px;}
+.tbl th{background:var(--bg3);padding:8px;font-size:10px;font-weight:500;color:var(--text2);text-transform:uppercase;letter-spacing:.04em;white-space:nowrap;position:sticky;top:0;z-index:2;text-align:center;}
+.tbl th.left{text-align:left;padding-left:10px;}
+.tbl th.today-head{border-bottom:3px solid var(--blue400);}
+.tbl th.event-head{background:var(--amber50);}
+.tbl td{background:var(--bg2);padding:5px 6px;text-align:center;}
+.tbl td.left{text-align:left;padding-left:10px;}
+.tbl td.event-col{background:var(--amber50);}
+.tbl td.fmt-cell{font-weight:600;font-size:12px;font-family:'IBM Plex Mono',monospace;background:var(--bg2)!important;}
+.tbl td.name-cell{font-size:11px;color:var(--text2);text-align:left;padding-left:10px;background:var(--bg2)!important;}
+.tbl td.per-cell{background:var(--bg2)!important;}
+
+/* STATUS PILLS */
+.status-btn{display:inline-flex;align-items:center;gap:4px;border:1px solid transparent;cursor:pointer;border-radius:4px;font-size:10px;font-weight:500;padding:2px 7px;margin:auto;transition:opacity .1s;white-space:nowrap;font-family:inherit;}
+.status-btn:hover{opacity:.8;}
+.status-btn::before{content:'';display:inline-block;width:6px;height:6px;border-radius:50%;flex-shrink:0;}
+.s-pending   {background:var(--gray50);  color:var(--gray600);  border-color:#B4B2A9;}  .s-pending::before{background:#888780;}
+.s-generated {background:var(--blue50);  color:var(--blue800);  border-color:var(--blue200);}  .s-generated::before{background:#378ADD;}
+.s-validated {background:var(--green50); color:var(--green800); border-color:var(--green200);} .s-validated::before{background:#97C459;}
+.s-functional{background:var(--purple50);color:var(--purple800);border-color:#AFA9EC;}  .s-functional::before{background:#7F77DD;}
+.s-certified {background:#E1F5EE;        color:#085041;         border-color:#9FE1CB;}  .s-certified::before{background:#5DCAA5;}
+.s-transmitted{background:#E8F0FE;       color:#1A40A0;         border-color:#9BAEED;} .s-transmitted::before{background:#4A6FE3;}
+.s-error     {background:var(--red50);   color:var(--red800);   border-color:var(--red200);}  .s-error::before{background:#E24B4A;}
+
+/* FREQ PILLS */
+.freq-pill{display:inline-block;font-size:10px;padding:2px 7px;border-radius:20px;font-weight:500;}
+.fp-diario{background:#E6F1FB;color:#185FA5;} .fp-semanal{background:#EAF3DE;color:#3B6D11;}
+.fp-bisemanal{background:#EEEDFE;color:#534AB7;} .fp-mensual{background:#FAEEDA;color:#854F0B;}
+.fp-trimestral{background:#FAECE7;color:#993C1D;}
+
+/* TOOLTIP */
+.tooltip{position:fixed;z-index:999;background:var(--bg2);border:1px solid var(--border2);border-radius:var(--radius);padding:10px 14px;font-size:12px;color:var(--text);pointer-events:none;display:none;max-width:360px;line-height:1.6;word-break:break-word;}
+.tooltip strong{display:block;margin-bottom:2px;}
+.tooltip.error-tip{border-color:var(--red200);border-top:3px solid var(--red600);}
+.tip-field{font-size:11px;color:var(--text2);margin-top:5px;line-height:1.5;}
+.tip-field span{color:var(--text);}
+
+/* ERROR PANEL */
+.error-panel{position:fixed;z-index:1000;background:var(--bg2);border:1px solid var(--red200);border-top:3px solid var(--red600);border-radius:var(--radius-lg);padding:14px 16px;width:300px;box-shadow:0 8px 24px rgba(0,0,0,.12);display:none;top:120px;right:24px;}
+.error-panel h3{font-size:12px;font-weight:600;color:var(--red800);margin-bottom:2px;}
+.ep-meta{font-size:11px;color:var(--text2);margin-bottom:10px;}
+.error-panel label{font-size:11px;color:var(--text2);display:block;margin-bottom:4px;margin-top:8px;}
+.error-panel input,.error-panel textarea{font-family:inherit;font-size:12px;width:100%;padding:6px 8px;border-radius:var(--radius);border:1px solid var(--border2);background:var(--bg2);color:var(--text);resize:vertical;}
+.error-panel textarea{min-height:60px;}
+.ep-actions{display:flex;gap:6px;margin-top:12px;justify-content:flex-end;}
+.ep-actions button{font-family:inherit;font-size:12px;padding:5px 12px;border-radius:var(--radius);border:1px solid var(--border2);background:var(--bg2);color:var(--text);cursor:pointer;}
+.ep-actions button.ep-save{background:var(--red600);color:#fff;border-color:var(--red600);}
+.ep-close{position:absolute;top:8px;right:10px;background:none;border:none;font-size:16px;color:var(--text3);cursor:pointer;}
+.error-note-dot{position:absolute;bottom:1px;left:1px;width:7px;height:7px;border-radius:50%;background:var(--red600);border:1.5px solid var(--bg2);cursor:pointer;}
+
+/* SECTIONS */
+.section{margin-top:28px;}
+.section-header{display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap;}
+.section-header h2{font-size:13px;font-weight:600;}
+.section-header span{font-size:11px;color:var(--text2);}
+.sec-filters{display:flex;gap:4px;margin-left:auto;}
+.sec-filters button{font-family:inherit;font-size:11px;padding:3px 9px;border-radius:20px;border:1px solid var(--border);background:var(--bg2);color:var(--text2);cursor:pointer;}
+.sec-filters button.active{background:var(--red50);color:var(--red600);border-color:var(--red200);}
+
+/* HISTORY TABLE */
+.hist-table{width:100%;border-collapse:separate;border-spacing:0;border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;}
+.hist-table th{background:var(--bg3);padding:8px 14px;font-size:10px;font-weight:500;color:var(--text2);text-transform:uppercase;letter-spacing:.04em;text-align:left;border-bottom:1px solid var(--border);white-space:nowrap;}
+.hist-table td{padding:10px 14px;font-size:12px;color:var(--text);border-bottom:1px solid var(--border);background:var(--bg2);vertical-align:top;line-height:1.6;white-space:normal;word-break:break-word;max-width:300px;}
+.hist-table tr:last-child td{border-bottom:none;}
+.hist-table tr:hover td{background:var(--gray50);}
+.td-fmt{font-family:'IBM Plex Mono',monospace;font-weight:600;white-space:nowrap;vertical-align:middle;}
+.td-date{white-space:nowrap;color:var(--text2);font-size:11px;vertical-align:middle;}
+.err-badge{display:inline-flex;align-items:center;font-size:10px;font-weight:500;padding:2px 8px;border-radius:4px;border:1px solid transparent;}
+
+/* EVENTS */
+.event-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:8px;}
+.event-card{background:var(--bg2);border:1px solid var(--border);border-left:3px solid var(--border2);border-radius:var(--radius);padding:10px 12px;display:flex;gap:10px;align-items:flex-start;}
+.event-card.this-week{border-left-color:var(--amber400);background:var(--amber50);}
+.event-date-badge{background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:4px 8px;text-align:center;min-width:46px;flex-shrink:0;}
+.event-card.this-week .event-date-badge{background:var(--amber50);border-color:var(--amber100);}
+.ed-day{font-size:16px;font-weight:600;font-family:'IBM Plex Mono',monospace;color:var(--text2);line-height:1;}
+.ed-mon{font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-top:1px;}
+.event-card.this-week .ed-day{color:var(--amber800);}
+.event-card.this-week .ed-mon{color:var(--amber600);}
+.event-body{flex:1;}
+.event-text{font-size:12px;color:var(--text);line-height:1.4;}
+.event-year{font-size:10px;color:var(--text3);margin-top:2px;}
+.event-del{background:none;border:none;cursor:pointer;color:var(--text3);font-size:16px;padding:0;line-height:1;}
+.event-del:hover{color:var(--red600);}
+.add-form{margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;}
+.add-form input{font-family:inherit;font-size:12px;padding:7px 10px;border-radius:var(--radius);border:1px solid var(--border2);background:var(--bg2);color:var(--text);}
+.add-form input[type=date]{width:140px;}
+.add-form input[type=text]{flex:1;min-width:200px;}
+.add-form button{font-family:inherit;font-size:12px;padding:7px 14px;border-radius:var(--radius);border:1px solid var(--border2);background:var(--bg2);color:var(--text);cursor:pointer;}
+.add-form button:hover{background:var(--bg3);}
+
+/* ERROR LOG */
+.err-log-filters button{font-family:inherit;font-size:11px;padding:3px 9px;border-radius:20px;border:1px solid var(--border);background:var(--bg2);color:var(--text2);cursor:pointer;}
+.err-log-filters button.active{background:var(--red50);color:var(--red600);border-color:var(--red200);}
+.err-badge-active{background:var(--red50);color:var(--red600);border-color:var(--red200);}
+.err-badge-resolved{background:var(--green50);color:var(--green600);border-color:var(--green200);}
+.err-del{background:none;border:none;cursor:pointer;color:var(--text3);font-size:14px;}
+.err-del:hover{color:var(--red600);}
+</style>
+</head>
+<body>
+<div class="page">
+
+<div class="header">
+  <div>
+    <h1>Control de Reportes Regulatorios — SFC</h1>
+    <p>Área de Reportes Regulatorios · Desde abril 7, 2026</p>
+  </div>
+  <div style="text-align:right;">
+    <span class="saved-badge" id="saved-badge">Guardado ✓</span>
+    <div class="enlivo"><span class="enlivo-dot"></span><span class="enlivo-text">En vivo</span><span class="enlivo-dt" id="enlivo-dt"></span></div>
+  </div>
+</div>
+
+<div class="stats-bar" id="stats"></div>
+
+<div class="toolbar">
+  <div class="week-nav">
+    <button id="btn-back" onclick="changeWeek(-1)">&#8249;</button>
+    <span class="week-label" id="week-label"></span>
+    <button onclick="changeWeek(1)">&#8250;</button>
+  </div>
+  <button class="btn" onclick="goToday()">Hoy</button>
+  <div class="filters" id="filter-bar"></div>
+</div>
+
+<div class="table-wrap">
+  <table class="tbl">
+    <thead id="tbl-head"></thead>
+    <tbody id="tbl-body"></tbody>
+  </table>
+</div>
+
+<div class="tooltip" id="tooltip"></div>
+
+<!-- ACTIVIDADES -->
+<div class="section" id="events-section">
+  <div class="section-header">
+    <h2>Actividades importantes</h2>
+    <span id="events-count"></span>
+  </div>
+  <div class="event-grid" id="event-grid"></div>
+  <div class="add-form">
+    <input type="date" id="ev-date"/>
+    <input type="text" id="ev-text" placeholder="Descripción de la actividad..."/>
+    <button onclick="addEvent()">+ Agregar</button>
+  </div>
+</div>
+
+<!-- HISTORIAL DE ERRORES -->
+<div class="section" id="err-log-section">
+  <div class="section-header">
+    <h2>Historial de errores</h2>
+    <span id="err-log-count"></span>
+    <div class="err-log-filters" style="display:flex;gap:4px;margin-left:auto;">
+      <button id="elf-all" class="active" onclick="setErrFilter('all')">Todos</button>
+      <button id="elf-active" onclick="setErrFilter('active')">Activos</button>
+      <button id="elf-resolved" onclick="setErrFilter('resolved')">Resueltos</button>
+    </div>
+  </div>
+  <div id="err-log-body"></div>
+</div>
+
+<!-- HISTORIAL DE ESTADOS -->
+<div class="section" id="status-section">
+  <div class="section-header">
+    <h2>Historial de estados por formato</h2>
+    <span id="status-subtitle"></span>
+    <div class="sec-filters" style="display:flex;gap:4px;margin-left:auto;">
+      <button id="sf-all" class="active" onclick="setStatusFilter('all')">Todos</button>
+      <button id="sf-pending" onclick="setStatusFilter('pending')">Pendiente</button>
+      <button id="sf-error" onclick="setStatusFilter('error')">Error</button>
+    </div>
+  </div>
+  <div id="status-body"></div>
+</div>
+
+<!-- ERROR PANEL -->
+<div class="error-panel" id="error-panel">
+  <button class="ep-close" onclick="closeErrorPanel()">×</button>
+  <h3 id="ep-title">Error en formato</h3>
+  <div class="ep-meta" id="ep-meta"></div>
+  <label>¿Qué falló?</label>
+  <input type="text" id="ep-what" placeholder="Ej: Archivo no generado..."/>
+  <label>¿Dónde está el error?</label>
+  <textarea id="ep-where" placeholder="Ej: Celda B12, módulo..."></textarea>
+  <div class="ep-actions">
+    <button onclick="closeErrorPanel()">Cancelar</button>
+    <button class="ep-save" onclick="saveErrorNote()">Guardar</button>
+  </div>
+</div>
+
+<script>
+const FORMATS = [
+  {id:'351',  name:'Portafolio de Inversiones',    freq:'diario',      weekend:true},
+  {id:'386',  name:'Valor en Riesgo',               freq:'diario',      weekend:true},
+  {id:'281',  name:'Cuentas Activas y Pasivas',     freq:'semanal'},
+  {id:'458S', name:'Flujos de Caja Semanal',        freq:'semanal'},
+  {id:'443',  name:'Encaje',                         freq:'bisemanal'},
+  {id:'238',  name:'CFEN',                           freq:'mensual'},
+  {id:'239',  name:'Margen de Solvencia',            freq:'mensual'},
+  {id:'409',  name:'Sectorización Activo/Pasivo',   freq:'mensual'},
+  {id:'427',  name:'Grandes Exposiciones Límites',  freq:'mensual'},
+  {id:'428',  name:'Grandes Exposiciones',           freq:'mensual'},
+  {id:'429',  name:'Garantías Idóneas',              freq:'mensual'},
+  {id:'433',  name:'Grupos Conectados',              freq:'mensual'},
+  {id:'458M', name:'Flujos de Caja Mensual',        freq:'mensual'},
+  {id:'00',   name:'Estados Financieros Mensuales', freq:'mensual'},
+  {id:'211',  name:'Acciones y Accionistas',        freq:'trimestral'},
+  {id:'529',  name:'Accionistas 2do/3er Nivel',     freq:'trimestral'},
+  {id:'PDF',  name:'EEFF y Notas PDF',              freq:'trimestral'},
+  {id:'XBRL', name:'XBRL',                          freq:'trimestral'},
+];
+
+const STATUSES    = ['pending','generated','validated','functional','certified','transmitted','error'];
+const S_LABEL     = {pending:'Pendiente',generated:'Generado',validated:'Val. Interno',functional:'Val. Funcional',certified:'Certificado',transmitted:'Transmitido',error:'Error'};
+const S_CLASS     = {pending:'s-pending',generated:'s-generated',validated:'s-validated',functional:'s-functional',certified:'s-certified',transmitted:'s-transmitted',error:'s-error'};
+const FREQ_LABEL  = {diario:'Diario',semanal:'Semanal',bisemanal:'Bisemanal',mensual:'Mensual',trimestral:'Trimestral'};
+const MON_SHORT   = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+const MON_LONG    = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+const DAY_SHORT   = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
+const TRI_CORTES  = ['03-31','06-30','09-30','12-31'];
+const START_DATE  = new Date('2026-04-07T00:00:00');
+
+const SK_STATE  = 'sfc_state_v3';
+const SK_EVENTS = 'sfc_events_v3';
+const SK_ERRLOG = 'sfc_errlog_v1';
+
+let appState = {}, events = [], errorLog = [];
+let errFilter = 'all', statusFilter = 'all';
+let weekStart = getWeekStart(new Date());
+let activeFilter = 'all';
+
+// ── STORAGE ──
+function loadAll() {
+  try { const s=localStorage.getItem(SK_STATE);  if(s) appState=JSON.parse(s); } catch(e){}
+  try { const e=localStorage.getItem(SK_EVENTS); events=e?JSON.parse(e):[{date:'2026-05-15',text:'Inclusión de 1,000 USD en cuenta JP Morgan'}]; } catch(e){ events=[]; }
+  try { const l=localStorage.getItem(SK_ERRLOG); if(l) errorLog=JSON.parse(l); } catch(e){}
+}
+function saveState()  { try{localStorage.setItem(SK_STATE, JSON.stringify(appState)); showSaved();}catch(e){} }
+function saveEvents() { try{localStorage.setItem(SK_EVENTS,JSON.stringify(events));  showSaved();}catch(e){} }
+function saveErrLog() { try{localStorage.setItem(SK_ERRLOG,JSON.stringify(errorLog)); showSaved();}catch(e){} }
+function showSaved()  { const b=document.getElementById('saved-badge'); if(!b)return; b.classList.add('show'); clearTimeout(b._t); b._t=setTimeout(()=>b.classList.remove('show'),2000); }
+
+// ── DATE HELPERS ──
+function getWeekStart(d) { const r=new Date(d); r.setHours(0,0,0,0); const dw=r.getDay(); r.setDate(r.getDate()+(dw===0?-6:1-dw)); return r; }
+function addDays(d,n)    { const r=new Date(d); r.setDate(r.getDate()+n); return r; }
+function fmtDate(d)      { return d.toISOString().slice(0,10); }
+
+function changeWeek(n) {
+  const next = addDays(weekStart, n*7);
+  if(n<0 && next < getWeekStart(START_DATE)) return;
+  weekStart = next;
+  renderAll();
+}
+function goToday() { weekStart=getWeekStart(new Date()); renderAll(); }
+
+// ── CORTE LOGIC ──
+function isCorte(fmt, d) {
+  if(d < START_DATE) return false;
+  const dw = d.getDay();
+  const isWD = dw!==0 && dw!==6;
+  const isEOM = d.getDate()===new Date(d.getFullYear(),d.getMonth()+1,0).getDate();
+  const md = String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+  if(fmt.freq==='diario')     return fmt.weekend ? true : isWD;
+  if(fmt.freq==='semanal')    return dw===5;
+  if(fmt.freq==='bisemanal')  return dw===5;
+  if(fmt.freq==='mensual')    return isEOM;
+  if(fmt.freq==='trimestral') return TRI_CORTES.includes(md);
+  return false;
+}
+
+function getStatus(fid,ds)    { return appState[fid+'__'+ds]||'pending'; }
+function cycleStatus(fid,ds)  {
+  if(!canEdit) return;
+  const cur=getStatus(fid,ds);
+  const next=STATUSES[(STATUSES.indexOf(cur)+1)%STATUSES.length];
+  appState[fid+'__'+ds]=next;
+  saveState();
+  if(next==='error') {
+    const fmt=FORMATS.find(f=>f.id===fid);
+    openErrorPanel(fid,ds,fmt?fmt.name:fid);
+  }
+  renderAll();
+}
+
+// ── FULL HISTORY ──
+function getFullHistory(filterFn) {
+  const today=new Date(); today.setHours(23,59,59,0);
+  const rows=[];
+  const d=new Date(START_DATE);
+  while(d<=today) {
+    FORMATS.forEach(fmt=>{
+      if(isCorte(fmt,d)) {
+        const ds=fmtDate(d);
+        const st=getStatus(fmt.id,ds);
+        if(!filterFn || filterFn(st)) rows.push({fid:fmt.id,name:fmt.name,freq:fmt.freq,ds,dd:new Date(d),st});
+      }
+    });
+    d.setDate(d.getDate()+1);
+  }
+  return rows;
+}
+
+// ── RENDER ALL ──
+function renderAll() {
+  renderCalendar();
+  renderStats();
+  renderFilters();
+  renderEvents();
+  renderErrLog();
+  renderStatusHistory();
+}
+
+// ── CALENDAR ──
+function renderCalendar() {
+  const days=Array.from({length:7},(_,i)=>addDays(weekStart,i));
+  const today=fmtDate(new Date());
+  const evSet=new Set(events.map(e=>e.date));
+  const d0=days[0],d6=days[6];
+  document.getElementById('week-label').textContent=d0.getDate()+' '+MON_SHORT[d0.getMonth()]+' – '+d6.getDate()+' '+MON_SHORT[d6.getMonth()]+' '+d6.getFullYear();
+  const backBtn=document.getElementById('btn-back');
+  if(backBtn){ const atStart=weekStart<=getWeekStart(START_DATE); backBtn.disabled=atStart; }
+
+  // thead
+  let th='<tr><th class="left">Formato</th><th class="left">Nombre</th><th class="left">Periodicidad</th>';
+  days.forEach(d=>{
+    const ds=fmtDate(d); const isToday=ds===today; const hasEv=evSet.has(ds);
+    const flagSvg=hasEv?'<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#BA7517" stroke-width="2.5"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>':'';
+    th+=`<th class="${isToday?'today-head ':''}${hasEv?'event-head ':''}" style="min-width:100px;">
+      <div style="display:flex;flex-direction:column;align-items:center;gap:2px;">
+        <span style="font-size:10px;">${DAY_SHORT[d.getDay()]}</span>
+        <span style="font-size:13px;font-weight:600;color:var(--text);">${d.getDate()}</span>
+        ${flagSvg}
+      </div></th>`;
+  });
+  th+='</tr>';
+  document.getElementById('tbl-head').innerHTML=th;
+
+  // tbody
+  const fmts=activeFilter==='all'?FORMATS:FORMATS.filter(f=>f.freq===activeFilter);
+  let rows='';
+  fmts.forEach(fmt=>{
+    rows+=`<tr>
+      <td class="fmt-cell left">${fmt.id}</td>
+      <td class="name-cell">${fmt.name}</td>
+      <td class="per-cell left"><span class="freq-pill fp-${fmt.freq}">${FREQ_LABEL[fmt.freq]}</span></td>`;
+    days.forEach(d=>{
+      const ds=fmtDate(d); const isToday=ds===fmtDate(new Date()); const hasEv=evSet.has(ds);
+      const evCls=hasEv?' event-col':''; const todayCls=isToday?' today-col':'';
+      if(isCorte(fmt,d)){
+        const st=getStatus(fmt.id,ds);
+        const errKey=fmt.id+'__'+ds+'__err';
+        const hasErrNote=appState[errKey]&&(appState[errKey].what||appState[errKey].where);
+        const noteBtn=st==='error'?`<span class="error-note-dot" onclick="event.stopPropagation();openErrorPanel('${fmt.id}','${ds}','${fmt.name}')"></span>`:'';
+        rows+=`<td class="${evCls}${todayCls}" style="position:relative;">
+          <button class="status-btn ${S_CLASS[st]}" onclick="cycleStatus('${fmt.id}','${ds}')"
+            onmouseenter="showTip(event,'${fmt.id}','${fmt.name}','${ds}','${st}')"
+            onmouseleave="hideTip()">${S_LABEL[st]}</button>
+          ${noteBtn}</td>`;
+      } else {
+        rows+=`<td class="${evCls}${todayCls}" style="color:var(--border2);font-size:16px;">·</td>`;
+      }
+    });
+    rows+='</tr>';
+  });
+  document.getElementById('tbl-body').innerHTML=rows;
+}
+
+// ── STATS ──
+function renderStats() {
+  const rows=getFullHistory();
+  const c={pending:0,generated:0,validated:0,functional:0,certified:0,transmitted:0,error:0};
+  rows.forEach(r=>{ c[r.st]=(c[r.st]||0)+1; });
+  const evCount=events.length;
+  // Rezagados = todo lo que NO es transmitted
+  const rezCount=rows.filter(r=>r.st!=='transmitted').length;
+  const errCount=c.error||0;
+
+  const chips=[
+    {key:'generated',  dot:'#378ADD',col:'#0C447C'},
+    {key:'validated',  dot:'#97C459',col:'#27500A'},
+    {key:'functional', dot:'#7F77DD',col:'#3C3489'},
+    {key:'certified',  dot:'#5DCAA5',col:'#085041'},
+    {key:'transmitted',dot:'#4A6FE3',col:'#1A40A0'},
+    {key:'pending',    dot:'#888780',col:'#5F5E5A'},
+  ];
+  const leftHtml=chips.map(s=>`<div class="stat-chip"><span class="sc-dot" style="background:${s.dot};"></span><span class="sc-n" style="color:${s.col};">${c[s.key]||0}</span><span class="sc-l">${S_LABEL[s.key]}</span></div>`).join('');
+  const rightHtml=`
+    <div class="stat-rchip sr-err"><span class="sc-dot" style="width:10px;height:10px;border-radius:50%;background:#E24B4A;flex-shrink:0;"></span><span class="sc-n">${errCount}</span><span class="sc-l">Errores</span></div>
+    <div class="stat-rchip sr-rez" onclick="scrollToStatus()" title="Ver rezagados"><span class="sc-n">${rezCount}</span><span class="sc-l">Rezagados</span></div>
+    <div class="stat-rchip sr-act" onclick="goToActivity()" title="Ver actividades"><span class="sc-n">${evCount}</span><span class="sc-l">Actividades</span></div>`;
+  document.getElementById('stats').innerHTML=`<div class="stats-states">${leftHtml}</div><div class="stats-divider"></div><div class="stats-right">${rightHtml}</div>`;
+}
+
+// ── FILTERS ──
+function renderFilters() {
+  const freqs=['all','diario','semanal','bisemanal','mensual','trimestral'];
+  const labels={all:'Todos',diario:'Diario',semanal:'Semanal',bisemanal:'Bisemanal',mensual:'Mensual',trimestral:'Trimestral'};
+  document.getElementById('filter-bar').innerHTML=freqs.map(f=>`<button class="filter-btn${activeFilter===f?' active':''}" onclick="setFilter('${f}')">${labels[f]}</button>`).join('');
+}
+function setFilter(f){ activeFilter=f; renderAll(); }
+
+// ── EVENTS ──
+function renderEvents() {
+  const days=Array.from({length:7},(_,i)=>addDays(weekStart,i));
+  const ds0=fmtDate(days[0]),ds6=fmtDate(days[6]);
+  const sorted=[...events].sort((a,b)=>a.date.localeCompare(b.date));
+  document.getElementById('events-count').textContent=sorted.length?sorted.length+' actividad'+(sorted.length>1?'es':'')+'':'';
+  if(!sorted.length){ document.getElementById('event-grid').innerHTML='<p style="font-size:12px;color:var(--text2);">Sin actividades.</p>'; return; }
+  document.getElementById('event-grid').innerHTML=sorted.map((ev,i)=>{
+    const d=new Date(ev.date+'T12:00:00'); const inWeek=ev.date>=ds0&&ev.date<=ds6;
+    return `<div class="event-card ${inWeek?'this-week':''}">
+      <div class="event-date-badge"><div class="ed-day">${d.getDate()}</div><div class="ed-mon">${MON_SHORT[d.getMonth()]}</div></div>
+      <div class="event-body"><div class="event-text">${ev.text}</div><div class="event-year">${d.getFullYear()}</div></div>
+      <button class="event-del" onclick="delEvent(${i})">×</button></div>`;
+  }).join('');
+}
+function addEvent(){ if(!canEdit) return; const dt=document.getElementById('ev-date').value; const tx=document.getElementById('ev-text').value.trim(); if(!dt||!tx)return; events.push({date:dt,text:tx}); events.sort((a,b)=>a.date.localeCompare(b.date)); document.getElementById('ev-text').value=''; saveEvents(); renderAll(); }
+function delEvent(i){ events.splice(i,1); saveEvents(); renderAll(); }
+function goToActivity(){ if(!events.length){document.getElementById('events-section').scrollIntoView({behavior:'smooth'});return;} const sorted=[...events].sort((a,b)=>a.date.localeCompare(b.date)); const today=fmtDate(new Date()); const target=sorted.find(e=>e.date>=today)||sorted[sorted.length-1]; weekStart=getWeekStart(new Date(target.date+'T12:00:00')); renderAll(); setTimeout(()=>document.getElementById('events-section').scrollIntoView({behavior:'smooth'}),100); }
+
+// ── ERROR LOG ──
+function renderErrLog(){
+  const filtered=errFilter==='all'?errorLog:errFilter==='active'?errorLog.filter(e=>!e.resolved):errorLog.filter(e=>e.resolved);
+  const sorted=[...filtered].sort((a,b)=>b.ds.localeCompare(a.ds)||b.loggedAt.localeCompare(a.loggedAt));
+  const active=errorLog.filter(e=>!e.resolved).length;
+  document.getElementById('err-log-count').textContent=errorLog.length?errorLog.length+' registro'+(errorLog.length>1?'s':'')+(active?' · '+active+' activo'+(active>1?'s':''):''):'';
+  ['all','active','resolved'].forEach(k=>{ const b=document.getElementById('elf-'+k); if(b)b.className=k===errFilter?'active':''; });
+  if(!sorted.length){ document.getElementById('err-log-body').innerHTML='<p style="font-size:12px;color:var(--text2);padding:8px 0;">'+(errorLog.length?'Sin registros para este filtro.':'Sin errores registrados.')+'</p>'; return; }
+  let tbl='<table class="hist-table"><thead><tr><th>Formato</th><th>Nombre</th><th>Fecha corte</th><th>¿Qué falló?</th><th>¿Dónde?</th><th>Estado</th><th>Registrado</th><th></th></tr></thead><tbody>';
+  sorted.forEach(entry=>{
+    const ri=errorLog.indexOf(entry);
+    const d=new Date(entry.ds+'T12:00:00'); const logD=new Date(entry.loggedAt);
+    const dateStr=d.getDate()+' '+MON_SHORT[d.getMonth()]+' '+d.getFullYear();
+    const logStr=logD.getDate()+' '+MON_SHORT[logD.getMonth()]+' '+String(logD.getHours()).padStart(2,'0')+':'+String(logD.getMinutes()).padStart(2,'0');
+    tbl+=`<tr><td class="td-fmt">${entry.fid}</td><td>${entry.name}</td><td class="td-date">${dateStr}</td>
+      <td class="td-date">${entry.what||'—'}</td><td class="td-date">${entry.where||'—'}</td>
+      <td><span class="err-badge ${entry.resolved?'err-badge-resolved':'err-badge-active'}">${entry.resolved?'✔ Resuelto':'✕ Activo'}</span></td>
+      <td class="td-date">${logStr}</td>
+      <td><button class="btn" style="font-size:10px;padding:2px 8px;" onclick="toggleResolved(${ri})">${entry.resolved?'Reabrir':'Resolver'}</button>
+          <button class="err-del" onclick="deleteErr(${ri})">✕</button></td></tr>`;
+  });
+  tbl+='</tbody></table>';
+  document.getElementById('err-log-body').innerHTML=tbl;
+}
+function setErrFilter(f){ errFilter=f; renderErrLog(); }
+function toggleResolved(i){ errorLog[i].resolved=!errorLog[i].resolved; saveErrLog(); renderAll(); }
+function deleteErr(i){ errorLog.splice(i,1); saveErrLog(); renderAll(); }
+
+// ── STATUS HISTORY ──
+function setStatusFilter(f){
+  statusFilter=f;
+  ['all','pending','error'].forEach(k=>{ const b=document.getElementById('sf-'+k); if(b)b.className=k===f?'active':''; });
+  renderStatusHistory();
+}
+function scrollToStatus(){ document.getElementById('status-section').scrollIntoView({behavior:'smooth'}); }
+
+function renderStatusHistory(){
+  const body=document.getElementById('status-body');
+  const subtitle=document.getElementById('status-subtitle');
+  if(!body) return;
+
+  const filterFn = statusFilter==='all' ? (st=>st!=='transmitted') : (st=>st===statusFilter);
+  const rows=getFullHistory(filterFn);
+  rows.sort((a,b)=>b.ds.localeCompare(a.ds));
+
+  if(subtitle) subtitle.textContent='';
+
+  if(!rows.length){ body.innerHTML='<p style="font-size:12px;color:var(--text2);padding:8px 0;">Sin registros para este filtro.</p>'; return; }
+
+  const SC={
+    pending:    {bg:'var(--gray50)',  color:'var(--gray600)',  border:'#B4B2A9'},
+    generated:  {bg:'var(--blue50)',  color:'var(--blue800)',  border:'var(--blue200)'},
+    validated:  {bg:'var(--green50)', color:'var(--green800)', border:'var(--green200)'},
+    functional: {bg:'var(--purple50)',color:'var(--purple800)',border:'#AFA9EC'},
+    certified:  {bg:'#E1F5EE',        color:'#085041',         border:'#9FE1CB'},
+    transmitted:{bg:'#E8F0FE',        color:'#1A40A0',         border:'#9BAEED'},
+    error:      {bg:'var(--red50)',   color:'var(--red800)',   border:'var(--red200)'},
+  };
+
+  let tbl='<table class="hist-table"><thead><tr><th>Formato</th><th>Nombre</th><th>Periodicidad</th><th>Fecha corte</th><th>Estado</th></tr></thead><tbody>';
+  rows.forEach(r=>{
+    const sc=SC[r.st]||SC.pending;
+    const dateStr=r.dd.getDate()+' '+MON_SHORT[r.dd.getMonth()]+' '+r.dd.getFullYear();
+    tbl+=`<tr><td class="td-fmt">${r.fid}</td><td>${r.name}</td>
+      <td><span class="freq-pill fp-${r.freq}">${FREQ_LABEL[r.freq]||r.freq}</span></td>
+      <td class="td-date">${dateStr}</td>
+      <td><span class="err-badge" style="background:${sc.bg};color:${sc.color};border-color:${sc.border};">${S_LABEL[r.st]}</span></td></tr>`;
+  });
+  tbl+='</tbody></table>';
+  body.innerHTML=tbl;
+}
+
+// ── TOOLTIP ──
+function showTip(e,fid,name,ds,st){
+  const t=document.getElementById('tooltip'); if(!t)return;
+  const d=new Date(ds+'T12:00:00');
+  const errKey=fid+'__'+ds+'__err'; const note=appState[errKey]||{};
+  let html=`<strong>${fid} — ${name}</strong>${DAY_SHORT[d.getDay()]} ${d.getDate()} ${MON_LONG[d.getMonth()]} ${d.getFullYear()}<br>Estado: <b>${S_LABEL[st]}</b>`;
+  if(st==='error'&&(note.what||note.where)){
+    if(note.what)  html+=`<div class="tip-field">¿Qué falló? <span>${note.what}</span></div>`;
+    if(note.where) html+=`<div class="tip-field">¿Dónde? <span>${note.where}</span></div>`;
+  }
+  html+='<br><em style="font-size:10px;color:var(--text3);">Clic para cambiar estado</em>';
+  t.className='tooltip'+(st==='error'?' error-tip':'');
+  t.innerHTML=html; t.style.display='block';
+  t.style.left=(e.clientX+14)+'px'; t.style.top=(e.clientY-8)+'px';
+}
+function hideTip(){ const t=document.getElementById('tooltip'); if(t)t.style.display='none'; }
+
+// ── ERROR PANEL ──
+let _ep={fid:null,ds:null};
+function openErrorPanel(fid,ds,name){
+  _ep={fid,ds};
+  const note=appState[fid+'__'+ds+'__err']||{};
+  const d=new Date(ds+'T12:00:00');
+  document.getElementById('ep-title').textContent='Error — Formato '+fid;
+  document.getElementById('ep-meta').textContent=name+' · '+d.getDate()+' '+MON_LONG[d.getMonth()]+' '+d.getFullYear();
+  document.getElementById('ep-what').value=note.what||'';
+  document.getElementById('ep-where').value=note.where||'';
+  document.getElementById('error-panel').style.display='block';
+  document.getElementById('ep-what').focus();
+}
+function closeErrorPanel(){ document.getElementById('error-panel').style.display='none'; }
+function saveErrorNote(){
+  const {fid,ds}=_ep; if(!fid)return;
+  const what=document.getElementById('ep-what').value.trim();
+  const where=document.getElementById('ep-where').value.trim();
+  appState[fid+'__'+ds+'__err']={what,where};
+  const fmt=FORMATS.find(f=>f.id===fid);
+  const existing=errorLog.findIndex(e=>e.fid===fid&&e.ds===ds);
+  const entry={fid,ds,name:fmt?fmt.name:fid,what,where,loggedAt:new Date().toISOString(),resolved:existing>=0?errorLog[existing].resolved:false};
+  if(existing>=0)errorLog[existing]=entry; else errorLog.push(entry);
+  saveErrLog(); saveState(); closeErrorPanel(); renderAll();
+}
+document.addEventListener('keydown',e=>{ if(e.key==='Escape')closeErrorPanel(); });
+
+// ── CLOCK ──
+function updateClock(){
+  const now=new Date();
+  const el=document.getElementById('enlivo-dt'); if(!el)return;
+  el.textContent=DAY_SHORT[now.getDay()]+' '+now.getDate()+' '+MON_SHORT[now.getMonth()]+' '+now.getFullYear()+' · '+String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0')+':'+String(now.getSeconds()).padStart(2,'0');
+}
+setInterval(updateClock,1000); updateClock();
+
+
+// ── EDIT MODE ──
+const EDIT_KEY = 'sfc2026admin';
+const canEdit = true; // everyone can edit
+
+function checkEditMode() {
+  if (!canEdit) {
+    // Add readonly banner
+    const banner = document.createElement('div');
+    banner.style.cssText = 'background:#E6F1FB;border:1px solid var(--blue200);border-radius:var(--radius);padding:6px 14px;font-size:11px;color:var(--blue800);margin-bottom:10px;display:flex;align-items:center;gap:8px;';
+    banner.innerHTML = '<span style="width:7px;height:7px;border-radius:50%;background:var(--blue400);display:inline-block;flex-shrink:0;"></span> Modo solo lectura — solo el administrador puede editar los estados.';
+    document.querySelector('.toolbar').before(banner);
+
+    // Disable all click interactions on status buttons
+    document.addEventListener('click', function(e) {
+      if (e.target.classList.contains('status-btn') || e.target.closest('.status-btn')) {
+        e.stopPropagation();
+        e.preventDefault();
+      }
+    }, true);
+
+    // Change cursor on status buttons via style
+    const style = document.createElement('style');
+    style.textContent = '.status-btn { cursor: default !important; pointer-events: none; } .error-note-dot { pointer-events: none; }';
+    document.head.appendChild(style);
+
+    // Hide add event form and error panel trigger
+    const addForm = document.querySelector('.add-form');
+    if (addForm) addForm.style.display = 'none';
+  }
+}
+
+// ── INIT ──
+document.addEventListener('DOMContentLoaded', function() {
+  loadAll();
+  renderAll();
+  checkEditMode();
+});
+// Also call directly in case DOMContentLoaded already fired
+if(document.readyState !== 'loading') {
+  loadAll();
+  renderAll();
+  checkEditMode();
+}
+</script>
+<div style="text-align:center;padding:20px 0 28px;font-size:11px;color:var(--text3);letter-spacing:.08em;text-transform:uppercase;">
+  Regulatory Reporting · SFC · 2026
+</div>
+</body>
+</html>
